@@ -1,0 +1,55 @@
+[package]
+name = "balances-hystory"
+version = "0.0.1"
+authors = ["Sergey Kutsenko <skutsenko@web3tech.ru>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = { version = "1.0.125", features = ["derive"] }
+serde_json = "1.0.64"
+serde_qs = { version = "0.8", features = ["warp"] }
+serde_with = "1.9.3"
+chrono = { version = "0.4.19", features = ["serde"] }
+envy = "0.4"
+tonic = "0.5"
+prost = { version = "0.8", features = ["no-recursion-limit"] }
+tokio = { version = "1.5.0", features = ["full"] }
+tokio-postgres = { version = "0.7.2", features = ["with-chrono-0_4", "with-serde_json-1"]}
+postgres-derive = { version = "0.4.0"}
+postgres-types = { version = "0.2.1"}
+async-trait = { version = "0.1.50"}
+waves-protobuf-schemas = { git = "https://github.com/wavesplatform/protobuf-schemas", rev="dc1597077cbf55aac4cd514f5510ba346c45b361"}
+diesel = { version= "1.4.6", features =["postgres"] }
+diesel_migrations = "1.4.0"
+#bigdecimal = { version = "0.2.0", features = ["serde"] }
+rust_decimal = {version ="1.14.3", features = ["serde", "db-tokio-postgres", "db-postgres"]}
+wavesexchange_log = { git = "https://github.com/waves-exchange/wavesexchange-rs", tag = "wavesexchange_log/0.2.0" }
+wavesexchange_warp = { git = "https://github.com/waves-exchange/wavesexchange-rs", tag = "wavesexchange_warp/0.10.0" }
+futures = "0.3"
+anyhow = "1.0.40"
+warp = "0.3"
+bs58 = "0.4.0"
+base64 = "0.13.0"
+once_cell = "1.7.2"
+blake2 = "0.8"
+sha3 = "0.8"
+bytes = "1.0.1"
+lazy_static = "1.4.0"
+thiserror = "1.0.25"
+fxhash = "0.2"
+itertools = "0.10.0"
+bb8-postgres="0.7.0"
+
+[lib]
+name = "lib"
+path = "src/lib/lib.rs"
+
+[[bin]]
+name = "consumer"
+path = "src/bin/consumer.rs"
+
+[[bin]]
+name = "migration"
+path = "src/bin/migration.rs"
