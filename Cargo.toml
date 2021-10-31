@@ -1,5 +1,5 @@
 [package]
-name = "balances-hystory"
+name = "balances-history"
 version = "0.0.1"
 authors = ["Sergey Kutsenko <skutsenko@web3tech.ru>"]
 edition = "2018"
@@ -23,7 +23,7 @@ async-trait = { version = "0.1.50"}
 waves-protobuf-schemas = { git = "https://github.com/wavesplatform/protobuf-schemas", rev="dc1597077cbf55aac4cd514f5510ba346c45b361"}
 diesel = { version= "1.4.6", features =["postgres"] }
 diesel_migrations = "1.4.0"
-#bigdecimal = { version = "0.2.0", features = ["serde"] }
+#bigdecimal = { version = "0.3.0", features = ["serde"] }
 rust_decimal = {version ="1.14.3", features = ["serde", "db-tokio-postgres", "db-postgres"]}
 wavesexchange_log = { git = "https://github.com/waves-exchange/wavesexchange-rs", tag = "wavesexchange_log/0.2.0" }
 wavesexchange_warp = { git = "https://github.com/waves-exchange/wavesexchange-rs", tag = "wavesexchange_warp/0.10.0" }
@@ -53,3 +53,11 @@ path = "src/bin/consumer.rs"
 [[bin]]
 name = "migration"
 path = "src/bin/migration.rs"
+
+[[bin]]
+name = "sql"
+path = "src/bin/sql.rs"
+
+[[bin]]
+name = "service"
+path = "src/bin/service.rs"

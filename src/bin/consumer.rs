@@ -1,25 +1,32 @@
 use anyhow::Result;
 use lib::consumer;
-use lib::consumer::mappers::blocks_microblocks;
 use lib::db::*;
 use consumer::SETTINGS;
+use wavesexchange_log::{info};
+
 
 #[tokio::main]
 async fn main() -> Result<()> {
 
-    let mut db = Db::new(&SETTINGS.config.postgres).await.unwrap();
-
+    let db = Db::new(&SETTINGS.config.postgres).await.unwrap();
+    
     init_db_data(&db).await;
-
+    
     let start_height = 
-    match  blocks_microblocks::get_last_height(&db).await {
+    match  mappers::blocks_microblocks::get_last_height(&db).await {
         None => SETTINGS.config.blockchain_start_height,
         Some(last_h) => std::cmp::max(last_h + 1, SETTINGS.config.blockchain_start_height)
     };
     
+    drop(db);
+
+    info!(
+        "Starting investments-consumer: {}; start height: {}",
+        SETTINGS.config.blockchain_updates_url,
+        start_height
+    );
 
     consumer::run(
-        &mut db,
         SETTINGS.config.blockchain_updates_url.clone(),
         start_height,
     )
@@ -28,4 +35,5 @@ async fn main() -> Result<()> {
 
 async fn init_db_data(db: &Db) {
     db.client.query("delete from blocks_microblocks where is_solidified = false", &[]).await.unwrap();
+    db.client.query("delete from blocks_microblocks where uid > (select max(block_uid) from balance_history)", &[]).await.unwrap();
 }

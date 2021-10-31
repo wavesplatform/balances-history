@@ -1,7 +1,6 @@
-use crate::db::{AsyncDb, Db};
-use tokio_postgres::types::ToSql;
+use crate::db::*;
 use tokio_postgres::Transaction;
-use wavesexchange_log::{info, debug};
+use wavesexchange_log::{info};
 
 #[derive(Clone, Debug)]
 pub struct Block {
@@ -10,11 +9,12 @@ pub struct Block {
     pub time_stamp: i64,
 }
 
+// this function called only once (per consumer restart) when we get first microblock after series of blocks; there is no way find out when we go to top of BU
 pub async fn unsolidify_last_block(tr: &Transaction<'_>) {
     let sql = "update blocks_microblocks set is_solidified = false where uid = (select uid from blocks_microblocks order by uid desc limit 1) returning uid";
 
     let st = tr.prepare(&sql).await.unwrap();
-    let rows =tr.query(&st, &[]).await.unwrap();
+    let rows = tr.query(&st, &[]).await.unwrap();
     let fix_uid : i64 = rows[0].get(0);
 
     info!("fix solidify block_uid: {}; to false", fix_uid);
@@ -31,37 +31,6 @@ pub async fn save(tr: &Transaction<'_>, block_id: &String, height: &u32, time_st
         .unwrap();
 
     rows[0].get(0)
-}
-
-pub async fn bulk_save(tr: &Transaction<'_>, blocks: &Vec<Block>) -> Vec<i64> {
-    if blocks.len() == 0 {
-        return vec![];
-    }
-
-    let mut sql = "insert into blocks_microblocks(id, height, time_stamp) values ".to_owned();
-    let sql_suffix = " returning uid";
-
-    let mut params: Vec<&(dyn ToSql + Sync)> = vec![];
-
-    blocks.iter().enumerate().for_each(|(idx, b)| {
-        sql.push_str(format!(" (${},${},${}),", 3 * idx + 1, 3 * idx + 2, 3 * idx + 3).as_str());
-        params.push(&b.id);
-        params.push(&b.height);
-        params.push(&b.time_stamp);
-    });
-    
-    let to_trim: &[_] = &[',', ' '];
-    let mut sql = sql.trim_end_matches(to_trim).to_owned();
-
-    sql.push_str(sql_suffix);
-    
-    // println!("sql: {};", sql);
-    // println!("params: {:#?}; ", &params);
-
-    let st = tr.prepare(&sql).await.unwrap();
-    let rows = tr.query(&st, &params).await.unwrap();
-
-    rows.iter().map(|row| row.get(0)).collect()
 }
 
 pub async fn get_last_height(db: &Db) -> Option<i32> {
@@ -90,7 +59,7 @@ pub async fn get_last_height(db: &Db) -> Option<i32> {
     
 }
 
-pub async fn rollback_microblocks(tr: &Transaction<'_>, block_id: &String) -> i64 {
+pub async fn rollback(tr: &Transaction<'_>, block_id: &String) -> i64 {
     let sql = "delete from blocks_microblocks where uid > (select min(uid) from blocks_microblocks where id = $1)";
 
     let st = tr.prepare(&sql).await.unwrap();
@@ -104,7 +73,7 @@ pub async fn rollback_microblocks(tr: &Transaction<'_>, block_id: &String) -> i6
     rows[0].get(0)
 }
 
-pub async fn solidify_microblocks(tr: &Transaction<'_>, ref_block_id: &String) -> Option<i64> {
+pub async fn solidify(tr: &Transaction<'_>, ref_block_id: &String) -> Option<i64> {
 
     let sql = r#"
         with last_real_block as  (
