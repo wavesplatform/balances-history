@@ -54,10 +54,6 @@ path = "src/bin/consumer.rs"
 name = "migration"
 path = "src/bin/migration.rs"
 
-# [[bin]]
-# name = "sql"
-# path = "src/bin/sql.rs"
-
 [[bin]]
 name = "service"
 path = "src/bin/service.rs"
