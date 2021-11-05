@@ -36,4 +36,7 @@ async fn main() -> Result<()> {
 async fn init_db_data(db: &Db) {
     db.client.query("delete from blocks_microblocks where is_solidified = false", &[]).await.unwrap();
     db.client.query("delete from blocks_microblocks where uid > (select max(block_uid) from balance_history)", &[]).await.unwrap();
+    
+    //delete all blocks and all inherited data that could be not saved in chunks on unclean shudown consumer
+    db.client.query("delete from blocks_microblocks where height > (select min(height) from safe_heights)", &[]).await.unwrap();
 }

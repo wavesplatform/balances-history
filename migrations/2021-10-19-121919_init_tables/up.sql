@@ -12,6 +12,14 @@ CREATE INDEX IF NOT EXISTS blocks_microblocks_is_solidified_idx ON blocks_microb
 CREATE INDEX IF NOT EXISTS block_microblocks_timestamp_uid ON blocks_microblocks (to_timestamp(time_stamp/1000) desc, uid desc);
 CREATE INDEX IF NOT EXISTS block_microblocks_height_uid ON blocks_microblocks (uid desc, height);
 
+
+CREATE TABLE safe_heights (
+    table_name TEXT,
+    height INTEGER NOT NULL
+);
+
+CREATE UNIQUE INDEX "safe_heights_table_name_uix" ON safe_heights(table_name);
+
 create table balance_history (
     block_uid BIGINT NOT NULL CONSTRAINT balance_history_block_uid_fkey REFERENCES blocks_microblocks (uid) ON DELETE CASCADE,
     address  TEXT COLLATE "C" NOT NULL,
@@ -21,8 +29,10 @@ create table balance_history (
     part_asset_id CHAR(1) COLLATE "C"
 ) partition by LIST (part_address);
 
-create index bh_address_asset_block_uid on balance_history(address, asset_id, block_uid desc);
-create index bh_block_uid on balance_history(block_uid);
+CREATE INDEX IF NOT EXISTS bh_address_asset_block_uid on balance_history(address, asset_id, block_uid desc);
+CREATE INDEX IF NOT EXISTS bh_block_uid on balance_history(block_uid);
+
+
 CREATE TABLE balance_history_address_A PARTITION OF balance_history FOR VALUES IN('A') partition by LIST (part_asset_id);
 CREATE TABLE balance_history_address_A_asset_WAVES PARTITION OF balance_history_address_A FOR VALUES IN('#');
 CREATE TABLE balance_history_address_A_asset_0 PARTITION OF balance_history_address_A FOR VALUES IN('0');

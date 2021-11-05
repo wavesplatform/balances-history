@@ -9,6 +9,7 @@ pub struct RowBalanceHistory {
   pub amount: Decimal,
   pub part_address: String,
   pub part_asset_id: String,
+  pub block_height:u32
 }
 
 const  BULK_CHUNK_SIZE: usize = 1000;
@@ -52,4 +53,3 @@ pub async fn save_bulk(
 
     Ok(())
 }
-
