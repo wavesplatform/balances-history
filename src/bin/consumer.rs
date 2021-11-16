@@ -34,11 +34,13 @@ async fn main() -> Result<()> {
 }
 
 async fn init_db_data(db: &Db) {
+    info!("delete non solidified blocks");
     db.client.query("delete from blocks_microblocks where is_solidified = false", &[]).await.unwrap();
-    db.client.query("delete from blocks_microblocks where uid > (select max(block_uid) from balance_history)", &[]).await.unwrap();
-    
+
+    info!("delete all blocks after min(height) from safe_heights");
     //delete all blocks and all inherited data that could be not saved in chunks on unclean shudown consumer
     db.client.query("delete from blocks_microblocks where height > (select min(height) from safe_heights)", &[]).await.unwrap();
     
+    info!("update safe_heights data");
     db.client.query("update safe_heights set height = (select height from blocks_microblocks order by uid desc limit 1)", &[]).await.unwrap();
 }
