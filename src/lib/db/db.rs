@@ -7,8 +7,8 @@ use tokio_postgres::{types::ToSql, Error, NoTls, Row, Statement};
 impl AsyncDb for Db {
     async fn new(pg_cfg: &PostgresConfig) -> Result<Self, Error> {
         let conn_str = format!(
-            "host={} user={} password={} port={} dbname={}",
-            pg_cfg.host, pg_cfg.user, pg_cfg.password, pg_cfg.port, pg_cfg.database
+            "host={} user={} password={} port={} dbname={} connect_timeout={} keepalives_idle={}",
+            pg_cfg.host, pg_cfg.user, pg_cfg.password, pg_cfg.port, pg_cfg.database, pg_cfg.connection_timeout, pg_cfg.keepalives_idle
         );
         let (client, connection) = tokio_postgres::connect(conn_str.as_ref(), NoTls).await?;
 

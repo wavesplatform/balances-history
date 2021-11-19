@@ -20,6 +20,9 @@ struct ConfigFlat {
     pub pgpassword: String,
     #[serde(default = "default_pgpool")]
     pub pgpoolsize: u32,
+    pub connection_timeout: u32,
+    pub pgkeepalives_idle: u32
+
 }
 
 #[derive(Debug, Clone)]
@@ -38,6 +41,8 @@ pub fn load() -> Result<Config> {
             user: config_flat.pguser,
             password: config_flat.pgpassword,
             pool_size: config_flat.pgpoolsize,
+            connection_timeout: config_flat.connection_timeout,
+            keepalives_idle: config_flat.pgkeepalives_idle,
         },
     })
 }

@@ -13,10 +13,10 @@ serde_qs = { version = "0.8", features = ["warp"] }
 serde_with = "1.9.3"
 chrono = { version = "0.4.19", features = ["serde"] }
 envy = "0.4"
-tonic = "0.5"
-prost = { version = "0.8", features = ["no-recursion-limit"] }
-tokio = { version = "1.5.0", features = ["full"] }
-tokio-postgres = { version = "0.7.2", features = ["with-chrono-0_4", "with-serde_json-1"]}
+tonic = "0.5.2"
+prost = { version = "0.8.0", features = ["no-recursion-limit"] }
+tokio = { version = "1.14.0", features = ["full"] }
+tokio-postgres = { version = "0.7.5", features = ["with-chrono-0_4", "with-serde_json-1"]}
 postgres-derive = { version = "0.4.0"}
 postgres-types = { version = "0.2.1"}
 async-trait = { version = "0.1.50"}

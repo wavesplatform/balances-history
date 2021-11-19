@@ -10,6 +10,8 @@ struct ConfigFlat {
     pub pgdatabase: String,
     pub pguser: String,
     pub pgpassword: String,
+    pub pgconnection_timeout: u32,
+    pub pgkeepalives_idle: u32,
     // #[serde(default = "default_pgpool")]
     // pub pgpoolsize: u32,
     pub blockchain_updates_url: String,
@@ -36,6 +38,8 @@ pub fn load() -> Result<Config> {
             user: config_flat.pguser,
             password: config_flat.pgpassword,
             pool_size: 1,
+            connection_timeout: config_flat.pgconnection_timeout,
+            keepalives_idle: config_flat.pgkeepalives_idle,
         },
     })
 }

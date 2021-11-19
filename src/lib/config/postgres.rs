@@ -6,4 +6,6 @@ pub struct PostgresConfig {
     pub user: String,
     pub password: String,
     pub pool_size: u32,
+    pub connection_timeout: u32,
+    pub keepalives_idle: u32,
 }
