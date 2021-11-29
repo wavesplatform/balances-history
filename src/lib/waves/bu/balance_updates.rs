@@ -78,17 +78,12 @@ fn push_balances(block_height: u32, block_uid: &i64, balances: &Vec<BalanceUpdat
               let asset_id = bs58::encode(&asset_id).into_string().trim().replace(char::from(0), "");
               let address = address.trim().replace(char::from(0), "");
               
-              let part_address = address.chars().last().unwrap().to_string().to_uppercase();
-              let part_asset_id = asset_id.chars().last().unwrap_or('#').to_string().to_uppercase();
-              
               chunk.push(
                 RowBalanceHistory {
                   block_uid: *block_uid,
                   address: address,
                   asset_id: asset_id,
                   amount: (*amount).into(),
-                  part_address: part_address,
-                  part_asset_id: part_asset_id,
                   block_height: block_height
                 }
               );

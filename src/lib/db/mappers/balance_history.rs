@@ -7,8 +7,6 @@ pub struct RowBalanceHistory {
   pub address: String,
   pub asset_id: String,
   pub amount: Decimal,
-  pub part_address: String,
-  pub part_asset_id: String,
   pub block_height:u32
 }
 
@@ -23,20 +21,17 @@ pub async fn save_bulk(
     }
 
     for ch in balances.chunks(BULK_CHUNK_SIZE).into_iter() {
-        let mut sql = "insert into balance_history(block_uid, address, asset_id, amount, part_address, part_asset_id) values ".to_owned();
+        let mut sql = "insert into balance_history(block_uid, address, asset_id, amount) values ".to_owned();
 
         let mut params: Vec<&(dyn ToSql + Sync)> = vec![];
         
         ch.into_iter().enumerate().for_each(|(idx, c)| {
 
-            sql.push_str(format!(" (${},${},${},${},${},${}),", 6 * idx + 1, 6 * idx + 2, 6 * idx + 3, 6 * idx + 4, 6 * idx + 5, 6 * idx + 6).as_str());
+            sql.push_str(format!(" (${},${},${},${}),", 4 * idx + 1, 4 * idx + 2, 4 * idx + 3, 4 * idx + 4).as_str());
             params.push(&c.block_uid);
             params.push(&c.address);
             params.push(&c.asset_id);
             params.push(&c.amount);
-
-            params.push(&c.part_address);
-            params.push(&c.part_asset_id);
         });
         
         let to_trim: &[_] = &[',', ' '];

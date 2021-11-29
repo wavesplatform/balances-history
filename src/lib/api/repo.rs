@@ -129,19 +129,14 @@ async fn balance_query(
             where b.block_uid < $1
               and b.address = $2 
               and b.asset_id = $3
-              and b.part_address = $4  
-              and b.part_asset_id= $5
             order by block_uid desc 
             limit 1";
-
-  let part_address = e.address.chars().last().unwrap().to_string().to_uppercase();
-  let part_asset_id = e.asset_id.chars().last().unwrap_or('#').to_string().to_uppercase();
 
   let conn = db.get()
     .await
     .map_err(|err| AppError::DbError(err.to_string()))?;
  
-  let rows = conn.query(sql, &[&uid, &e.address, &e.asset_id, &part_address, &part_asset_id])
+  let rows = conn.query(sql, &[&uid, &e.address, &e.asset_id])
     .await
     .map_err(|err| AppError::DbError(err.to_string()))?;
 
