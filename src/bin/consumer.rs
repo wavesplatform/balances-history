@@ -20,12 +20,6 @@ async fn main() -> Result<()> {
     
     drop(db);
 
-    info!(
-        "Starting investments-consumer: {}; start height: {}",
-        SETTINGS.config.blockchain_updates_url,
-        start_height
-    );
-
     consumer::run(
         SETTINGS.config.blockchain_updates_url.clone(),
         start_height,

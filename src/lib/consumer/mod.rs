@@ -31,7 +31,7 @@ pub async fn run(
     });
 
     info!(
-        "Starting investments-consumer: {}; start height: {}",
+        "Starting balances-consumer: {}; start height: {}",
         blockchain_updates_url.as_ref(),
         start_height
     );
@@ -47,28 +47,26 @@ pub async fn run(
     let balance_analyzer = BalanceAnalyzer::new(100).await;
 
     loop {
-        let height_download_start = Instant::now();
 
         let mut block: BlockchainUpdateInfo = stream.message().await?.into();
 
-        let height_processing_start = Instant::now();
+        let processing_start = Instant::now();
 
         let block_uid = block_analyzer.send(&block).await;
         block.uid = Some(block_uid);
 
         balance_analyzer.send(&block).await;
 
-        let height_processing_end = Instant::now();
-        let height_processing_duration =
-            height_processing_end.duration_since(height_download_start);
+        let processing_end = Instant::now();
+        let processing_duration =
+            processing_end.duration_since(processing_start);
 
         info!(
-            "height {}; {} id: {}; processed: {} ms; download: {} ms;",
+            "height {}; {} id: {}; processed: {} ms;",
             block.height.clone().unwrap(),
             block.block_type,
             block.id.clone().unwrap(),
-            height_processing_duration.as_millis(),
-            height_processing_start.duration_since(height_download_start).as_millis()
+            processing_duration.as_millis(),
         );
 
     }
