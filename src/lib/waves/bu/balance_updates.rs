@@ -5,7 +5,7 @@ use crate::db::{*, mappers::{safe_heights,balance_history::{self, RowBalanceHist
 use waves_protobuf_schemas::waves::{events::state_update::BalanceUpdate, Amount};
 use crate::waves::BlockType;
 
-const CHUNK_SIZE: usize = 10000;
+const CHUNK_SIZE: usize = 1000;
 const TABLE_NAME: &str = "balance_history";
 
 pub struct Analyzer {

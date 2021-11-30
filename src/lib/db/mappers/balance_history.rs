@@ -10,7 +10,7 @@ pub struct RowBalanceHistory {
   pub block_height:u32
 }
 
-const  BULK_CHUNK_SIZE: usize = 10000;
+const  BULK_CHUNK_SIZE: usize = 1000;
 
 pub async fn save_bulk(
     tr: &Transaction<'_>,
