@@ -5,12 +5,10 @@ use crate::consumer::SETTINGS;
 use crate::db::*;
 use crate::waves::BlockType;
 use tokio_postgres::Transaction;
-use wavesexchange_apis::{api_clients::node::NodeApi, HttpClient as ApiHttpClient};
 use wavesexchange_log::{error, info};
 
 pub struct Analyzer {
     db: Db,
-    node_api_client: ApiHttpClient<NodeApi>,
     was_microblocks: bool,
     save_solidified: bool,
 }
@@ -18,13 +16,9 @@ pub struct Analyzer {
 impl Analyzer {
     pub async fn new() -> Self {
         let db = Db::new(&SETTINGS.config.postgres).await.unwrap();
-        let node_api_client = ApiHttpClient::<NodeApi>::builder()
-            .with_base_url(&SETTINGS.config.node_api_url)
-            .build();
 
         Self {
             db: db,
-            node_api_client: node_api_client,
             was_microblocks: false,
             save_solidified: true,
         }

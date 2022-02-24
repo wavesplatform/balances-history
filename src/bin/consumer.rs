@@ -40,7 +40,7 @@ async fn init_db_data(db: &Db) {
         )
         .await
         .unwrap();
-
+    
     info!("update safe_heights data");
     db.client.query("update safe_heights set height = (select height from blocks_microblocks order by uid desc limit 1)", &[]).await.unwrap();
 }

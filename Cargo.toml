@@ -2,7 +2,7 @@
 name = "balances-history"
 version = "0.0.1"
 authors = ["Sergey Kutsenko <skutsenko@web3tech.ru>"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -27,7 +27,7 @@ diesel_migrations = "1.4.0"
 rust_decimal = {version ="1.14.3", features = ["serde", "db-tokio-postgres", "db-postgres"]}
 wavesexchange_log = { git = "https://github.com/waves-exchange/wavesexchange-rs", tag = "wavesexchange_log/0.2.0" }
 wavesexchange_warp = { git = "https://github.com/waves-exchange/wavesexchange-rs", tag = "wavesexchange_warp/0.10.0" }
-wavesexchange_apis = { path = "../wavesexchange-rs/wavesexchange_apis/", version = "0.1"}
+#wavesexchange_apis = { path = "../wavesexchange-rs/wavesexchange_apis/", version = "0.1"}
 
 futures = "0.3"
 anyhow = "1.0.53"
