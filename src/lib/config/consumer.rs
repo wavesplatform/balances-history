@@ -15,13 +15,11 @@ struct ConfigFlat {
     // pub pgpoolsize: u32,
     pub blockchain_updates_url: String,
     pub blockchain_start_height: i32,
-    pub node_api_url: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct Config {
     pub blockchain_updates_url: String,
-    pub node_api_url: String,
     pub blockchain_start_height: i32,
     pub postgres: PostgresConfig,
 }
@@ -32,7 +30,6 @@ pub fn load() -> Result<Config> {
     Ok(Config {
         blockchain_updates_url: config_flat.blockchain_updates_url,
         blockchain_start_height: config_flat.blockchain_start_height,
-        node_api_url: config_flat.node_api_url,
         postgres: PostgresConfig {
             host: config_flat.pghost,
             port: config_flat.pgport,
