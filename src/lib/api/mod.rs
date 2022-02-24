@@ -1,7 +1,7 @@
 mod config;
 pub mod error;
-pub mod server;
 pub mod repo;
+pub mod server;
 mod settings;
 
 use chrono::{DateTime, Utc};
@@ -32,7 +32,7 @@ pub struct BalanceEntry {
 
 #[derive(Debug, Default, Deserialize, Clone)]
 pub struct BalanceQuery {
-    pub address_asset_pairs: Vec<BalanceEntry>
+    pub address_asset_pairs: Vec<BalanceEntry>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -41,7 +41,7 @@ pub struct BalanceResponseItem {
     pub asset_id: String,
     pub amount: Decimal,
     pub block_height: i32,
-    pub block_timestamp: ApiDate
+    pub block_timestamp: ApiDate,
 }
 
 impl BalanceQuery {
@@ -54,7 +54,9 @@ impl BalanceQuery {
             })
             .collect();
 
-        Self { address_asset_pairs }
+        Self {
+            address_asset_pairs,
+        }
     }
 }
 

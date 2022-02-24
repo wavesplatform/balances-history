@@ -1,18 +1,14 @@
 pub mod settings;
 use anyhow::Result;
+use bu::balance_updates::Analyzer as BalanceAnalyzer;
+use bu::blocks::Analyzer as BlockAnalyzer;
 use lazy_static::lazy_static;
 use settings::Settings;
+use std::time::Instant;
 use wavesexchange_log::info;
-use bu::blocks::Analyzer as BlockAnalyzer;
-use bu::balance_updates::Analyzer as BalanceAnalyzer;
-use std::{time::Instant};
 
-use waves_protobuf_schemas::waves::{
-    events::{
-        grpc::{
-            blockchain_updates_api_client::BlockchainUpdatesApiClient,SubscribeRequest,
-        },
-    },
+use waves_protobuf_schemas::waves::events::grpc::{
+    blockchain_updates_api_client::BlockchainUpdatesApiClient, SubscribeRequest,
 };
 
 use crate::waves::{bu, BlockchainUpdateInfo};
@@ -42,12 +38,11 @@ pub async fn run(
             .subscribe(request)
             .await?
             .into_inner();
-    
+
     let mut block_analyzer = BlockAnalyzer::new().await;
-    let balance_analyzer = BalanceAnalyzer::new(100).await;
+    let balance_analyzer = BalanceAnalyzer::new(1000).await;
 
     loop {
-
         let mut block: BlockchainUpdateInfo = stream.message().await?.into();
 
         let processing_start = Instant::now();
@@ -58,8 +53,7 @@ pub async fn run(
         balance_analyzer.send(&block).await;
 
         let processing_end = Instant::now();
-        let processing_duration =
-            processing_end.duration_since(processing_start);
+        let processing_duration = processing_end.duration_since(processing_start);
 
         info!(
             "height {}; {} id: {}; processed: {} ms;",
@@ -68,6 +62,5 @@ pub async fn run(
             block.id.clone().unwrap(),
             processing_duration.as_millis(),
         );
-
     }
 }

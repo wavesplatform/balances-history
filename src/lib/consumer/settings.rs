@@ -10,10 +10,7 @@ unsafe impl Sync for Settings {}
 
 impl Settings {
     pub fn init() -> Self {
-
         let config: conumser_config::Config = conumser_config::load().unwrap();
-        Self {
-            config: config,
-        }
+        Self { config: config }
     }
 }

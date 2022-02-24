@@ -21,8 +21,7 @@ struct ConfigFlat {
     #[serde(default = "default_pgpool")]
     pub pgpoolsize: u32,
     pub connection_timeout: u32,
-    pub pgkeepalives_idle: u32
-
+    pub pgkeepalives_idle: u32,
 }
 
 #[derive(Debug, Clone)]

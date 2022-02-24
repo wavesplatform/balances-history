@@ -2,11 +2,9 @@ use crate::config::postgres::PostgresConfig;
 use anyhow::Result;
 use serde::Deserialize;
 
-
 #[derive(Deserialize, Debug, Clone)]
 struct ConfigFlat {
     pub port: u16,
-
     pub pghost: String,
     pub pgport: u16,
     pub pgdatabase: String,
@@ -15,7 +13,6 @@ struct ConfigFlat {
     pub pgpoolsize: u32,
     pub pgconnection_timeout: u32,
     pub pgkeepalives_idle: u32,
-
 }
 
 #[derive(Debug, Clone)]

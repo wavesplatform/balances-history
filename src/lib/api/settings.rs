@@ -12,8 +12,6 @@ impl Settings {
     pub fn init() -> Self {
         let config = config::load().unwrap();
 
-        Self {
-            config: config,
-        }    
+        Self { config: config }
     }
 }
