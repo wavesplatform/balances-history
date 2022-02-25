@@ -11,6 +11,7 @@ use crate::waves::BlockType;
 use rust_decimal::Decimal;
 use tokio::sync::mpsc::{self, Sender};
 use waves_protobuf_schemas::waves::{events::state_update::BalanceUpdate, Amount};
+use wavesexchange_log::info;
 
 const CHUNK_SIZE: usize = 1000;
 const BH_TABLE_NAME: &str = "balance_history";
@@ -75,6 +76,8 @@ async fn save_chunk(db: &mut Db, chunk: &Vec<BalanceHistory>) -> Result<(), anyh
     safe_heights::save(&tr, BH_TABLE_NAME, bh_min_height - 1).await?;
 
     tr.commit().await?;
+
+    info!("saved safe balance_history height: {}", bh_min_height - 1);
 
     Ok(())
 }
