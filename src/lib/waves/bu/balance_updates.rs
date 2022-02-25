@@ -16,6 +16,7 @@ use wavesexchange_log::info;
 const CHUNK_SIZE: usize = 1000;
 const BH_TABLE_NAME: &str = "balance_history";
 
+#[derive(Debug)]
 pub struct BalanceHistory {
     pub block_uid: i64,
     pub address: String,
@@ -46,7 +47,7 @@ impl Analyzer {
                     was_microblocks = true;
                 }
 
-                if was_microblocks || chunk.len() > CHUNK_SIZE {
+                if !chunk.is_empty() && (was_microblocks || chunk.len() > CHUNK_SIZE) {
                     save_chunk(&mut db, &chunk).await.unwrap(); // не понимаю можно ли тут сделать что-то более полезное чем unwrap
                     chunk.clear();
                 }
@@ -68,17 +69,15 @@ async fn save_chunk(db: &mut Db, chunk: &Vec<BalanceHistory>) -> Result<(), anyh
     let address_map = unique_address::merge_bulk(&tr, &chunk).await?;
 
     let bh_uids = balance_history::save_bulk(&tr, &chunk, &assets_map, &address_map).await?;
+    if !bh_uids.is_empty() {
+        balance_history_max_uids_per_height::fill_from_balance_history(&tr, &bh_uids).await?;
 
-    balance_history_max_uids_per_height::fill_from_balance_history(&tr, &bh_uids).await?;
+        let bh_min_height = chunk.iter().map(|i| i.block_height).min().unwrap_or(1);
 
-    let bh_min_height = chunk.iter().map(|i| i.block_height).min().unwrap_or(1);
-
-    safe_heights::save(&tr, BH_TABLE_NAME, bh_min_height - 1).await?;
+        safe_heights::save(&tr, BH_TABLE_NAME, bh_min_height - 1).await?;
+    }
 
     tr.commit().await?;
-
-    info!("saved safe balance_history height: {}", bh_min_height - 1);
-
     Ok(())
 }
 

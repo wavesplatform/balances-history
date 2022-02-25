@@ -1,4 +1,5 @@
 use tokio_postgres::Transaction;
+use wavesexchange_log::info;
 
 pub async fn save(
     tr: &Transaction<'_>,
@@ -13,9 +14,16 @@ pub async fn save(
     where 
       sf.table_name = $1
       and sf.height != $2
+      returning table_name, height
   "#;
 
-    tr.query(sql, &[&table_name, &(safe_height as i32)]).await?;
+    tr.query(sql, &[&table_name, &(safe_height as i32)])
+        .await?
+        .iter()
+        .for_each(|r| {
+            let r: (String, i32) = (r.get(0), r.get(1));
+            info!("saved new save height for table: {} height: {}", r.0, r.1);
+        });
 
     Ok(())
 }

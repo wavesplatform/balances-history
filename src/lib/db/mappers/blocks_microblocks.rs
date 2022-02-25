@@ -48,7 +48,7 @@ pub async fn save(
     rows[0].get(0)
 }
 
-pub async fn get_last_safe_height_from_blocks(db: &Db) -> Option<i32> {
+pub async fn get_last_height(db: &Db) -> Option<i32> {
     let sql =
         "select height from blocks_microblocks where block_type = $1 and is_solidified = true order by uid desc limit 1";
 
