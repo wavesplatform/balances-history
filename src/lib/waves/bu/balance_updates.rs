@@ -73,7 +73,7 @@ async fn save_chunk(db: &mut Db, chunk: &Vec<BalanceHistory>) -> Result<(), anyh
         balance_history_max_uids_per_height::fill_from_balance_history(&tr, &bh_uids).await?;
 
         let bh_min_height = chunk.iter().map(|i| i.block_height).min().unwrap_or(1);
-
+        info!("bulk saved balance_history records: {}", bh_uids.len());
         safe_heights::save(&tr, BH_TABLE_NAME, bh_min_height - 1).await?;
     }
 

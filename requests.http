@@ -1,0 +1,33 @@
+###
+POST http://localhost:8080/balance_history?timestamp=2017-08-18T23:16:09Z
+content-type: application/json
+
+{
+  "address_asset_pairs": [
+    {"address":"3PESyRqYseiNymihU6PQErafFGyDEDUMVe1", "asset_id":""},
+    {"address":"3PFm8qbQtUw2keiR1Hkq9Z1ymsXLV6SALA1", "asset_id":""},
+    {"address":"3PNNDUxYXTiPLCN3v3H5AQYGhgoUcCxShb1", "asset_id":""}
+  ]
+}
+
+
+###
+POST https://mainnet-dev.waves.exchange/api/v1/balances/balance_history?height=2825928
+content-type: application/json
+
+{
+  "address_asset_pairs": [
+    {"address":"3PESyRqYseiNymihU6PQErafFGyDEDUMVe1", "asset_id":""},
+    {"address":"3PFm8qbQtUw2keiR1Hkq9Z1ymsXLV6SALA1", "asset_id":""},
+    {"address":"3PNNDUxYXTiPLCN3v3H5AQYGhgoUcCxShb1", "asset_id":""}
+  ]
+}
+
+###
+GET http://localhost:8080/asset_distribution/WAVES/3000000
+
+###
+GET http://localhost:8080/asset_distribution/WAVES/3000000?after=10000000000000
+
+###
+GET http://localhost:8080/asset_distribution/WAVES/2000000

@@ -1,5 +1,8 @@
 use super::error::AppError;
-use super::{api_custom_reject, repo, BalanceQuery, BalanceResponseItem, SETTINGS};
+use super::repo::AssetDistribution;
+use super::{
+    api_custom_reject, repo, AssetDistributionItem, BalanceQuery, BalanceResponseItem, SETTINGS,
+};
 use bb8_postgres::{bb8::Pool, PostgresConnectionManager};
 use std::collections::HashMap;
 use std::convert::Infallible;
@@ -12,7 +15,7 @@ use wavesexchange_warp::log::access;
 use wavesexchange_warp::pagination::{List, PageInfo};
 
 const ERROR_CODES_PREFIX: u16 = 95;
-const DEFAULT_LIMIT: i64 = 100;
+pub const DEFAULT_LIMIT: i64 = 100;
 
 fn with_resource<T: Send + Sync + Clone + 'static>(
     res: T,
@@ -46,15 +49,15 @@ pub async fn run(rdb: Pool<PostgresConnectionManager<NoTls>>) -> Result<(), AppE
         .and_then(bh_handler_address)
         .map(|l| warp::reply::json(&l));
 
-    let bh_address_asset = warp::path!("balance_history" / "asset" / String)
+    let bh_asset_distribution = warp::path!("asset_distribution" / String / u32)
         .and(warp::get())
-        .and(warp::path::end())
         .and(with_resource(rdb.clone()))
+        .and(warp::path::end())
         .and(warp::query::<HashMap<String, String>>())
-        .and_then(bh_handler_asset)
+        .and_then(bh_handler_asset_distribution)
         .map(|l| warp::reply::json(&l));
 
-    let routes = bh.or(bh_address).or(bh_address_asset);
+    let routes = bh.or(bh_address).or(bh_asset_distribution);
 
     let srv = routes.with(warp::log::custom(access)).recover(move |rej| {
         error!(&rej);
@@ -97,8 +100,7 @@ async fn bh_handler_address(
 ) -> Result<List<BalanceResponseItem>, reject::Rejection> {
     let uid = repo::get_uids_from_req(&rdb, &get_params).await?;
 
-    let items: Vec<BalanceResponseItem> =
-        repo::get_all_assets_by_address(&rdb, &address, &uid).await?;
+    let items: Vec<BalanceResponseItem> = repo::all_assets_by_address(&rdb, &address, &uid).await?;
 
     let list = List {
         items: items,
@@ -111,46 +113,40 @@ async fn bh_handler_address(
     Ok(list)
 }
 
-async fn bh_handler_asset(
+async fn bh_handler_asset_distribution(
     asset_id: String,
+    height: u32,
     rdb: Pool<PostgresConnectionManager<NoTls>>,
     get_params: HashMap<String, String>,
-) -> Result<List<BalanceResponseItem>, reject::Rejection> {
-    let mut items: Vec<BalanceResponseItem> = vec![];
-    /*
-    create temp table hist as
-    select address_id, max(uid) max_uid, max(balance_history_uid) max_bh_uid
-        from balance_history_max_uids_per_height
-        where
-            asset_id = 1
-        and height < 3002309
-        group by address_id
-    ;
-    -- create index "hist_max_uid_idx" on hist(max_uid);
-    create index "hist_max_bh_uid_idx" on hist(max_bh_uid);
+) -> Result<List<AssetDistributionItem>, reject::Rejection> {
+    let mut asset = asset_id;
 
-    alter table hist add column amount numeric(100,0);
-    alter table hist add column height INTEGER;
+    if asset.eq("WAVES".into()) {
+        asset = "".into();
+    }
 
-    update hist h
-        set amount = bh.amount,
-            height = bh.height
-    from balance_history_max_uids_per_height bh
-    where h.max_uid = bh.uid;
+    let after_uid: Option<i64> = match get_params.get("after".into()) {
+        Some(a) => match (*a).parse::<i64>() {
+            Ok(ii) => Some(ii),
+            _ => None,
+        },
+        _ => None,
+    };
 
+    let d = repo::asset_distribution(&rdb, &asset, &(height as i32), after_uid).await?;
 
-    select h.height, h.amount, u_addr.address
-        from hist h
-            inner join unique_address u_addr on h.address_id = u_addr.uid
-        order by 2 desc, 1 desc
-    ;
+    let ret = match d {
+        AssetDistribution::Exist((rows, has_next_page, last_uid)) => {
+            (rows, has_next_page, Some(format!("{}", last_uid)))
+        }
+        _ => (vec![], false, None),
+    };
 
-    */
     let list = List {
-        items: items,
+        items: ret.0,
         page_info: PageInfo {
-            last_cursor: None,
-            has_next_page: false,
+            last_cursor: ret.2,
+            has_next_page: ret.1,
         },
     };
 

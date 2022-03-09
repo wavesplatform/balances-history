@@ -30,6 +30,15 @@ pub struct BalanceEntry {
     pub asset_id: String,
 }
 
+#[derive(Debug, Serialize, Clone)]
+pub struct AssetDistributionItem {
+    #[serde(skip_serializing)]
+    pub uid: i64,
+    pub address: String,
+    pub amount: Decimal,
+    pub height: i32,
+}
+
 #[derive(Debug, Default, Deserialize, Clone)]
 pub struct BalanceQuery {
     pub address_asset_pairs: Vec<BalanceEntry>,

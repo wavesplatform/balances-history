@@ -1,3 +1,5 @@
+use core::time;
+
 use crate::{db::*, waves::BlockType};
 use tokio_postgres::Transaction;
 use wavesexchange_log::{error, info};
@@ -175,7 +177,10 @@ pub async fn solidify(tr: &Transaction<'_>, ref_block_id: &String) -> Option<(i6
         let height = rows[0].try_get::<usize, i32>(1);
         let timestamp = rows[0].try_get::<usize, i64>(2);
 
-        return Some((uid.unwrap(), height.unwrap(), timestamp.unwrap()));
+        if uid.is_ok() {
+            // непонятно но видимо иногда приходит rollback на id которого никогда не было
+            return Some((uid.unwrap(), height.unwrap(), timestamp.unwrap()));
+        }
     }
     None
 }

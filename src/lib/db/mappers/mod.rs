@@ -1,3 +1,4 @@
+pub mod asset_distribution;
 pub mod balance_history;
 pub mod balance_history_max_uids_per_height;
 pub mod blocks_microblocks;

@@ -4,7 +4,7 @@ use wavesexchange_log::info;
 pub async fn save(
     tr: &Transaction<'_>,
     table_name: &str,
-    safe_height: u32,
+    height: u32,
 ) -> Result<(), anyhow::Error> {
     let sql = r#"
     insert into safe_heights as sf (table_name, height)
@@ -16,6 +16,8 @@ pub async fn save(
       and sf.height != $2
       returning table_name, height
   "#;
+
+    let safe_height = std::cmp::max(0, height - crate::consumer::SAFE_HEIGHT_OFFSET);
 
     tr.query(sql, &[&table_name, &(safe_height as i32)])
         .await?

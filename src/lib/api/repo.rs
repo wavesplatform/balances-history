@@ -1,7 +1,11 @@
-use super::{error::AppError, BalanceEntry, BalanceQuery, BalanceResponseItem};
+use super::{
+    error::AppError, AssetDistributionItem, BalanceEntry, BalanceQuery, BalanceResponseItem,
+};
+use crate::api::server::DEFAULT_LIMIT;
 use bb8_postgres::{bb8::Pool, PostgresConnectionManager};
 use chrono::{DateTime, Utc};
 use futures::future::try_join_all;
+use serde::Serialize;
 use std::collections::HashMap;
 use tokio_postgres::NoTls;
 
@@ -22,6 +26,31 @@ impl<'a> UidsQuery<'a> {
             _ => false,
         }
     }
+}
+
+macro_rules! conn {
+    ($db:ident) => {
+        $db.get()
+            .await
+            .map_err(|err| AppError::DbError(err.to_string()))?
+    };
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub enum AssetDistribution {
+    Exist((Vec<AssetDistributionItem>, bool, i64)),
+    NoData,
+    InProgress,
+}
+
+//uid, asset_id, height, task_state, state_updated, error_message
+pub struct AssetDistributionTask {
+    uid: i64,
+    asset_id: String,
+    height: i32,
+    task_state: String,
+    state_updated: DateTime<Utc>,
+    error_message: String,
 }
 
 pub async fn get_uids_from_req(
@@ -62,24 +91,16 @@ pub async fn get_uids_from_req(
 
     match sql {
         UidsQuery::ByHeight(s, h) => {
-            let conn = db
-                .get()
-                .await
-                .map_err(|err| AppError::DbError(err.to_string()))?;
+            let conn = conn!(db);
 
-            //dbg!(s, h );
             rows = conn
                 .query(s, &[&(h as i32)])
                 .await
                 .map_err(|err| AppError::DbError(err.to_string()))?;
         }
         UidsQuery::ByTimestamp(s, t) => {
-            let conn = db
-                .get()
-                .await
-                .map_err(|err| AppError::DbError(err.to_string()))?;
+            let conn = conn!(db);
 
-            //dbg!(s, t);
             rows = conn
                 .query(s, &[&t])
                 .await
@@ -119,7 +140,123 @@ pub async fn get_balances_by_pairs(
     Ok(res)
 }
 
-pub async fn get_all_assets_by_address(
+pub async fn asset_distribution_exists(
+    db: &PooledDb,
+    asset_id: &String,
+    height: &i32,
+) -> Result<bool, AppError> {
+    let sql = "SELECT table_name FROM information_schema.tables WHERE  table_schema = $1 AND table_name = $2";
+
+    let table_name = format!("{}_{}", asset_id, height);
+    let conn = conn!(db);
+
+    let ret: Vec<String> = conn
+        .query(sql, &[&crate::ASSET_DISTRIBUTION_PG_SCHEMA, &table_name])
+        .await
+        .map_err(|err| AppError::DbError(err.to_string()))?
+        .iter()
+        .map(|r| r.get(0))
+        .collect();
+
+    if ret.is_empty() {
+        return Ok(false);
+    }
+    Ok(true)
+}
+
+pub async fn asset_distribution_task_by_asset_id_height(
+    db: &PooledDb,
+    asset_id: &String,
+    height: &i32,
+) -> Result<Option<AssetDistributionTask>, AppError> {
+    let conn = conn!(db);
+
+    let mut tasks: Vec<AssetDistributionTask> = conn
+        .query(
+            "select uid, asset_id, height, task_state::TEXT, state_updated::timestamptz, coalesce(error_message, '')::TEXT from asset_distribution_tasks where asset_id = $1 and height = $2",
+            &[&asset_id, &height],
+        )
+        .await
+        .map_err(|err| AppError::DbError(err.to_string()))?
+        .iter()
+        .map(|task| AssetDistributionTask {
+            uid: task.get(0),
+            asset_id: task.get(1),
+            height: task.get(2),
+            task_state: task.get(3),
+            state_updated: task.get(4),
+            error_message: task.get(5),
+        })
+        .collect();
+
+    if tasks.len() > 0 {
+        return Ok(Some(tasks.pop().unwrap()));
+    }
+
+    Ok(None)
+}
+
+pub async fn asset_distribution(
+    db: &PooledDb,
+    asset_id: &String,
+    height: &i32,
+    after_uid: Option<i64>,
+) -> Result<AssetDistribution, AppError> {
+    if !asset_distribution_exists(&db, &asset_id, &height).await? {
+        match asset_distribution_task_by_asset_id_height(&db, &asset_id, &height).await? {
+            Some(_) => return Ok(AssetDistribution::InProgress),
+            None => return Ok(AssetDistribution::NoData),
+        }
+    }
+
+    let sql = format!(
+        "select ad.uid, uaddr.address, bhm.amount, bhm.height
+        from {}.{}_{} ad
+        inner join balance_history_max_uids_per_height bhm
+            on ad.max_uid = bhm.uid
+        inner join unique_address uaddr on ad.address_id = uaddr.uid
+        where ad.uid > $1
+        order by ad.uid 
+        limit $2",
+        crate::ASSET_DISTRIBUTION_PG_SCHEMA,
+        asset_id,
+        height
+    );
+
+    let after_uid = after_uid.unwrap_or(0);
+
+    let conn = conn!(db);
+    let mut rows: Vec<AssetDistributionItem> = conn
+        .query(&sql, &[&after_uid, &(DEFAULT_LIMIT + 1)])
+        .await
+        .map_err(|err| AppError::DbError(err.to_string()))?
+        .iter()
+        .map(|r| AssetDistributionItem {
+            uid: r.get(0),
+            address: r.get(1),
+            amount: r.get(2),
+            height: r.get(3),
+        })
+        .collect();
+
+    if rows.is_empty() {
+        return Ok(AssetDistribution::Exist((vec![], false, 0)));
+    }
+
+    let nav = {
+        if rows.len() > DEFAULT_LIMIT as usize {
+            let r = rows.pop().unwrap();
+            (true, r.uid - 1)
+        } else {
+            let r = rows.last().unwrap();
+            (false, r.uid)
+        }
+    };
+
+    Ok(AssetDistribution::Exist((rows, nav.0, nav.1)))
+}
+
+pub async fn all_assets_by_address(
     db: &PooledDb,
     address: &String,
     uid: &i64,
@@ -150,10 +287,7 @@ async fn distinct_assets_by_address(
 ) -> Result<Vec<BalanceEntry>, AppError> {
     let sql = "select address, asset_id from balance_history where address = $1 group by 1, 2";
 
-    let conn = db
-        .get()
-        .await
-        .map_err(|err| AppError::DbError(err.to_string()))?;
+    let conn = conn!(db);
 
     let ret = conn
         .query(sql, &[&address])
@@ -185,10 +319,7 @@ async fn balance_query(
             order by block_uid desc 
             limit 1";
 
-    let conn = db
-        .get()
-        .await
-        .map_err(|err| AppError::DbError(err.to_string()))?;
+    let conn = conn!(db);
 
     let rows = conn
         .query(sql, &[&uid, &e.address, &e.asset_id])
