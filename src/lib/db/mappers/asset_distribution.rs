@@ -1,22 +1,16 @@
+use super::distribution_task::{self, AssetDistributionTask};
 use crate::db::Db;
 use tokio_postgres::Transaction;
 use wavesexchange_log::{info, warn};
 
 use super::blocks_microblocks;
 
-#[derive(Clone, Debug)]
-pub struct AssetDistributionTask {
-    uid: i64,
-    asset_id: String,
-    height: i32,
-}
-
 // return task rows processed on success
 pub async fn refresh(db: &mut Db) -> Result<u8, anyhow::Error> {
     info!("checking new tasks for asset distribution");
     let max_height = blocks_microblocks::get_last_height(db).await.unwrap();
 
-    match get_distribution_next_task(&db).await? {
+    match distribution_task::next_task(&db).await? {
         Some(t) => {
             set_task_progress(&db, &t.uid).await?;
 
@@ -101,7 +95,7 @@ pub async fn process_task(
     tr.query(sql.into(), &[]).await?;
 
     let sql = format!(
-        "create table {}.{}_{} as select row_number() over() as uid, * from distribution_hist order by amount desc",
+        "create table {}.{}_{} as select row_number() over(order by amount desc) as uid, * from distribution_hist order by amount desc",
         &crate::ASSET_DISTRIBUTION_PG_SCHEMA, &task.asset_id, &task.height
     );
     tr.query(&sql, &[]).await?;
@@ -117,31 +111,4 @@ pub async fn process_task(
     set_task_done(&tr, &task.uid).await?;
 
     Ok(1)
-}
-
-pub async fn get_distribution_next_task(
-    db: &Db,
-) -> Result<Option<AssetDistributionTask>, anyhow::Error> {
-    let sql = "select adt.uid, ua.asset_id, adt.height 
-                        from asset_distribution_tasks adt
-                        inner join unique_assets ua 
-                            on adt.asset_id = ua.asset_id
-                        where 
-                            adt.task_state = 'new'::enum_task_state_ad
-                        order by adt.uid desc 
-                        limit 1";
-
-    let row = db
-        .client
-        .query(sql.into(), &[])
-        .await?
-        .iter()
-        .map(|r| AssetDistributionTask {
-            uid: r.get(0),
-            asset_id: r.get(1),
-            height: r.get(2),
-        })
-        .nth(0);
-
-    Ok(row)
 }

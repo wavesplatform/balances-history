@@ -63,7 +63,7 @@ impl Analyzer {
 }
 
 async fn save_chunk(db: &mut Db, chunk: &Vec<BalanceHistory>) -> Result<(), anyhow::Error> {
-    let tr = db.client.transaction().await?;
+    let tr = db.transaction().await?;
 
     let assets_map = unique_assets::merge_bulk(&tr, &chunk).await?;
     let address_map = unique_address::merge_bulk(&tr, &chunk).await?;

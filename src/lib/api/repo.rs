@@ -1,16 +1,16 @@
 use super::{
     error::AppError, AssetDistributionItem, BalanceEntry, BalanceQuery, BalanceResponseItem,
 };
-use crate::api::server::DEFAULT_LIMIT;
-use bb8_postgres::{bb8::Pool, PostgresConnectionManager};
+use crate::{
+    api::server::DEFAULT_LIMIT,
+    db::{mappers::distribution_task, PooledDb},
+};
 use chrono::{DateTime, Utc};
 use futures::future::try_join_all;
 use serde::Serialize;
 use std::collections::HashMap;
-use tokio_postgres::NoTls;
 
 static PG_MAX_BIGINT: i64 = 9223372036854775807;
-type PooledDb = Pool<PostgresConnectionManager<NoTls>>;
 
 #[derive(Debug)]
 enum UidsQuery<'a> {
@@ -196,6 +196,29 @@ pub async fn asset_distribution_task_by_asset_id_height(
     Ok(None)
 }
 
+pub async fn create_asset_distribution_task(
+    db: &PooledDb,
+    asset_id: &String,
+    height: &i32,
+) -> Result<warp::http::StatusCode, AppError> {
+    let s = match asset_distribution_task_by_asset_id_height(&db, &asset_id, &height).await? {
+        Some(_) => warp::http::StatusCode::ACCEPTED,
+        None => {
+            let task = distribution_task::create(&db, &asset_id, &height)
+                .await
+                .map_err(|err| AppError::DbError(err.to_string()))?;
+
+            if task.is_some() {
+                return Ok(warp::http::StatusCode::CREATED);
+            }
+
+            warp::http::StatusCode::ACCEPTED
+        }
+    };
+
+    Ok(s)
+}
+
 pub async fn asset_distribution(
     db: &PooledDb,
     asset_id: &String,
@@ -246,7 +269,7 @@ pub async fn asset_distribution(
     let nav = {
         if rows.len() > DEFAULT_LIMIT as usize {
             let r = rows.pop().unwrap();
-            (true, r.uid - 1)
+            (true, r.uid - 1) // -1 it's ok beacause uid is generated right for this
         } else {
             let r = rows.last().unwrap();
             (false, r.uid)
@@ -310,12 +333,12 @@ async fn balance_query(
 ) -> Result<Option<BalanceResponseItem>, anyhow::Error> {
     let sql = "select ad.address, ast.asset_id, b.amount, bm.height block_height, to_timestamp(bm.time_stamp/1000) block_timestamp
             from balance_history b 
-            inner join blocks_microblocks bm on b.block_uid = bm.uid
-            inner join unique_assets ast on b.asset_id = ast.uid
-            inner join unique_address ad on b.address_id = ad.uid
+                inner join blocks_microblocks bm on b.block_uid = bm.uid
+                inner join unique_assets ast on b.asset_id = ast.uid
+                inner join unique_address ad on b.address_id = ad.uid
             where b.block_uid < $1
-              and b.address_id = (select uid from unique_address where address = $2)
-              and b.asset_id = (select uid from unique_assets where asset_id = $3)
+                and b.address_id = (select uid from unique_address where address = $2)
+                and b.asset_id = (select uid from unique_assets where asset_id = $3)
             order by block_uid desc 
             limit 1";
 

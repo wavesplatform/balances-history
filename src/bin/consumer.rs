@@ -8,7 +8,7 @@ use wavesexchange_log::info;
 #[tokio::main]
 async fn main() -> Result<()> {
     let mut db = Db::new(&SETTINGS.config.postgres).await.unwrap();
-    let tr = db.client.transaction().await.unwrap();
+    let tr = db.transaction().await.unwrap();
 
     init_db_data(tr).await;
 

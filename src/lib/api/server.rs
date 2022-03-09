@@ -55,9 +55,22 @@ pub async fn run(rdb: Pool<PostgresConnectionManager<NoTls>>) -> Result<(), AppE
         .and(warp::path::end())
         .and(warp::query::<HashMap<String, String>>())
         .and_then(bh_handler_asset_distribution)
-        .map(|l| warp::reply::json(&l));
+        .map(|l: (List<AssetDistributionItem>, warp::http::StatusCode)| {
+            let json = warp::reply::json(&l.0);
+            warp::reply::with_status(json, l.1)
+        });
 
-    let routes = bh.or(bh_address).or(bh_asset_distribution);
+    let bh_asset_distribution_task = warp::path!("asset_distribution" / String / u32)
+        .and(warp::post())
+        .and(with_resource(rdb.clone()))
+        .and(warp::path::end())
+        .and_then(bh_handler_asset_distribution_task)
+        .map(|s: warp::http::StatusCode| warp::reply::with_status("", s));
+
+    let routes = bh
+        .or(bh_address)
+        .or(bh_asset_distribution)
+        .or(bh_asset_distribution_task);
 
     let srv = routes.with(warp::log::custom(access)).recover(move |rej| {
         error!(&rej);
@@ -118,7 +131,7 @@ async fn bh_handler_asset_distribution(
     height: u32,
     rdb: Pool<PostgresConnectionManager<NoTls>>,
     get_params: HashMap<String, String>,
-) -> Result<List<AssetDistributionItem>, reject::Rejection> {
+) -> Result<(List<AssetDistributionItem>, warp::http::StatusCode), reject::Rejection> {
     let mut asset = asset_id;
 
     if asset.eq("WAVES".into()) {
@@ -134,12 +147,20 @@ async fn bh_handler_asset_distribution(
     };
 
     let d = repo::asset_distribution(&rdb, &asset, &(height as i32), after_uid).await?;
+    let mut http_code = warp::http::StatusCode::OK;
 
     let ret = match d {
         AssetDistribution::Exist((rows, has_next_page, last_uid)) => {
             (rows, has_next_page, Some(format!("{}", last_uid)))
         }
-        _ => (vec![], false, None),
+        AssetDistribution::InProgress => {
+            http_code = warp::http::StatusCode::ACCEPTED;
+            (vec![], false, None)
+        }
+        AssetDistribution::NoData => {
+            http_code = warp::http::StatusCode::NO_CONTENT;
+            (vec![], false, None)
+        }
     };
 
     let list = List {
@@ -150,5 +171,19 @@ async fn bh_handler_asset_distribution(
         },
     };
 
-    Ok(list)
+    Ok((list, http_code))
+}
+
+async fn bh_handler_asset_distribution_task(
+    asset_id: String,
+    height: u32,
+    rdb: Pool<PostgresConnectionManager<NoTls>>,
+) -> Result<warp::http::StatusCode, reject::Rejection> {
+    let mut asset = asset_id;
+
+    if asset.eq("WAVES".into()) {
+        asset = "".into();
+    }
+
+    Ok(repo::create_asset_distribution_task(&rdb, &asset, &(height as i32)).await?)
 }

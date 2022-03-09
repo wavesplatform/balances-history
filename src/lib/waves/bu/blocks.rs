@@ -26,7 +26,7 @@ impl Analyzer {
 
     //blocks saves immediatly because uid need to other Analyzers
     pub async fn send(&mut self, block: &BlockchainUpdateInfo) -> i64 {
-        let tr = self.db.client.transaction().await.unwrap();
+        let tr = self.db.transaction().await.unwrap();
 
         let uid = match block.block_type {
             BlockType::MicroBlock => {
