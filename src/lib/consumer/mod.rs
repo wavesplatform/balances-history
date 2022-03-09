@@ -26,7 +26,7 @@ pub async fn run(
 ) -> Result<(), anyhow::Error> {
     let consumer_handle = tokio::spawn(async move {
         let url: String = blockchain_updates_url.as_ref().into();
-        //        run_blockchain_analyze(url, start_height).await
+        run_blockchain_analyze(url, start_height).await
     });
 
     let distribution_handle = tokio::spawn(async move { run_asset_distribution_exporter().await });
