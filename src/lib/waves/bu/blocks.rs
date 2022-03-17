@@ -1,10 +1,7 @@
-use std::time::Duration;
-
 use super::BlockchainUpdateInfo;
 use crate::consumer::SETTINGS;
 use crate::db::*;
 use crate::waves::BlockType;
-use tokio_postgres::Transaction;
 use wavesexchange_log::{error, info};
 
 pub struct Analyzer {
@@ -80,7 +77,7 @@ impl Analyzer {
 
                 max_uid
             }
-            _ => {
+            BlockType::EMPTY => {
                 unreachable!()
             }
         };

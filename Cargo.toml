@@ -27,6 +27,7 @@ diesel_migrations = "1.4.0"
 rust_decimal = {version ="1.14.3", features = ["serde", "db-tokio-postgres", "db-postgres"]}
 wavesexchange_log = { git = "https://github.com/waves-exchange/wavesexchange-rs", tag = "wavesexchange_log/0.2.0" }
 wavesexchange_warp = { git = "https://github.com/waves-exchange/wavesexchange-rs", tag = "wavesexchange_warp/0.10.0" }
+wavesexchange_apis = { git = "https://github.com/waves-exchange/wavesexchange-rs", rev = "0df115918feaf1e56f8233c5d96e712d5cb17489" }
 
 futures = "0.3"
 anyhow = "1.0.53"

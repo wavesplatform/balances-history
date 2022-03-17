@@ -47,7 +47,7 @@ impl Analyzer {
                     was_microblocks = true;
                 }
 
-                if !chunk.is_empty() && (was_microblocks || chunk.len() > CHUNK_SIZE) {
+                if was_microblocks || chunk.len() >= CHUNK_SIZE {
                     save_chunk(&mut db, &chunk).await.unwrap(); // не понимаю можно ли тут сделать что-то более полезное чем unwrap
                     chunk.clear();
                 }

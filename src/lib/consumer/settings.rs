@@ -1,6 +1,6 @@
 use crate::config::consumer as conumser_config;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Settings {
     pub config: conumser_config::Config,
 }

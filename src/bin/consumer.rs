@@ -1,16 +1,18 @@
 use anyhow::Result;
 use consumer::SETTINGS;
 use lib::consumer;
+use lib::db::mappers::distribution_task;
 use lib::db::*;
-use tokio_postgres::Transaction;
 use wavesexchange_log::info;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let mut db = Db::new(&SETTINGS.config.postgres).await.unwrap();
-    let tr = db.transaction().await.unwrap();
+    let mut db = Db::new(&SETTINGS.config.postgres)
+        .await
+        .expect("can't connect to postgres");
 
-    init_db_data(tr).await;
+    init_db_data(&mut db).await.expect("can't init db data");
+    distribution_task::find_failed_tasks(&db).await?;
 
     let start_height = match mappers::blocks_microblocks::get_last_height(&db).await {
         None => SETTINGS.config.blockchain_start_height,
@@ -22,41 +24,42 @@ async fn main() -> Result<()> {
     consumer::run(SETTINGS.config.blockchain_updates_url.clone(), start_height).await
 }
 
-async fn init_db_data(tr: Transaction<'_>) {
+async fn init_db_data(db: &mut Db) -> Result<(), anyhow::Error> {
+    let tr = (*db).transaction().await?;
+
     info!("delete non solidified blocks");
 
     tr.query(
         "delete from blocks_microblocks where is_solidified = false",
         &[],
     )
-    .await
-    .unwrap();
+    .await?;
 
-    let mut min_safe_height: i32 = 0;
-
-    tr.query("select min(height) from safe_heights", &[])
-        .await
-        .unwrap()
+    let min_safe_height = tr
+        .query("select min(height) from safe_heights", &[])
+        .await?
         .iter()
-        .for_each(|r| min_safe_height = r.get(0));
+        .map(|r| r.get::<usize, i32>(0))
+        .nth(0)
+        .unwrap_or(0);
 
     info!("deleting all blocks with height > {}", min_safe_height);
     tr.query(
         "delete from blocks_microblocks where height > $1",
         &[&min_safe_height],
     )
-    .await
-    .unwrap();
+    .await?;
 
-    let mut new_safe_height: i32 = 0;
-    tr.query(
-        "select height from blocks_microblocks order by uid desc limit 1",
-        &[],
-    )
-    .await
-    .unwrap()
-    .iter()
-    .for_each(|r| new_safe_height = r.get(0));
+    let new_safe_height = tr
+        .query(
+            "select height from blocks_microblocks order by uid desc limit 1",
+            &[],
+        )
+        .await?
+        .iter()
+        .map(|r| r.get::<usize, i32>(0))
+        .nth(0)
+        .unwrap_or(0);
 
     info!(
         "set up new safe height for all tables to: {}",
@@ -64,8 +67,9 @@ async fn init_db_data(tr: Transaction<'_>) {
     );
 
     tr.query("update safe_heights set height = $1", &[&new_safe_height])
-        .await
-        .unwrap();
+        .await?;
 
-    tr.commit().await.unwrap();
+    tr.commit().await?;
+
+    Ok(())
 }

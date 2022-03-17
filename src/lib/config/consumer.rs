@@ -22,6 +22,7 @@ pub struct Config {
     pub blockchain_updates_url: String,
     pub blockchain_start_height: i32,
     pub postgres: PostgresConfig,
+    pub test_changed: Vec<String>,
 }
 
 pub fn load() -> Result<Config> {
@@ -40,5 +41,6 @@ pub fn load() -> Result<Config> {
             connection_timeout: config_flat.pgconnection_timeout,
             keepalives_idle: config_flat.pgkeepalives_idle,
         },
+        test_changed: vec![],
     })
 }

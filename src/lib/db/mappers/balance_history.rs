@@ -67,12 +67,17 @@ pub async fn save_bulk(
         let vals = vals.trim_end_matches(to_trim).to_owned();
 
         // так как в balances записи могут быть из разных блоков/микроблоков, то в нём могут быть записи которые откатились
-        // через blockchain-rollback и constraint на таблицу blocks_microblocks
+        // через blockchain-rollback и мы получим ошибку constraint на таблицу blocks_microblocks
         // поэтому перед вставкой мы проверяем есть ли такой uid в blocks_microblocks
+        // внутренний select должет пытаться взять блокировку blocks_microblocks по uid, так как
+        // в соседнем соединении после начала нашей транзакции может прийти
+        // blockchain-rollback а мы вставляем уже несуществующий block_uid
+
         let sql = format!("insert into balance_history(block_uid, amount, address_id, asset_id) 
-                                    select vals.*
+                                    select bm.uid, vals.amount, vals.address_id, vals.asset_id
                                         from (values {vals}) as vals(block_uid, amount, address_id, asset_id)
                                         inner join blocks_microblocks bm on bm.uid = vals.block_uid
+                                    for update
                                 returning uid");
 
         // println!("sql: {};", sql);
