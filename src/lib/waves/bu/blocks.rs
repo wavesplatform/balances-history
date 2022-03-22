@@ -1,7 +1,6 @@
-use super::BlockchainUpdateInfo;
-use crate::consumer::SETTINGS;
 use crate::db::*;
 use crate::waves::BlockType;
+use crate::{consumer::SETTINGS, waves::BlockchainUpdateInfo};
 use wavesexchange_log::{error, info};
 
 pub struct Analyzer {

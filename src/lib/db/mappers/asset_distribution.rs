@@ -91,19 +91,19 @@ pub async fn process_task(
             set amount = bh.amount,
                 height = bh.height
         from balance_history_max_uids_per_height bh
-        where h.max_uid = bh.uid";
+        where h.max_bh_uid = bh.balance_history_uid";
     tr.query(sql.into(), &[]).await?;
 
     let sql = format!(
-        "create table {}.{}_{} as select row_number() over(order by amount desc) as uid, * from distribution_hist order by amount desc",
-        &crate::ASSET_DISTRIBUTION_PG_SCHEMA, &task.asset_id, &task.height
+        "create table {}.task_uid_{}_{} as select row_number() over(order by amount desc) as uid, * from distribution_hist order by amount desc",
+        &crate::ASSET_DISTRIBUTION_PG_SCHEMA, &task.uid, &task.height
     );
     tr.query(&sql, &[]).await?;
 
     let sql = format!(
-        "create unique index on {}.{}_{}(uid asc)",
+        "create unique index on {}.task_uid_{}_{}(uid asc)",
         &crate::ASSET_DISTRIBUTION_PG_SCHEMA,
-        &task.asset_id,
+        &task.uid,
         &task.height
     );
     tr.query(&sql, &[]).await?;

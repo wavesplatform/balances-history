@@ -1,4 +1,3 @@
-use super::BlockchainUpdateInfo;
 use crate::consumer::SETTINGS;
 use crate::db::{
     mappers::{
@@ -7,7 +6,7 @@ use crate::db::{
     },
     *,
 };
-use crate::waves::BlockType;
+use crate::waves::{BlockType, BlockchainUpdateInfo};
 use rust_decimal::Decimal;
 use tokio::sync::mpsc::{self, Sender};
 use waves_protobuf_schemas::waves::{events::state_update::BalanceUpdate, Amount};

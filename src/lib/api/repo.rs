@@ -9,6 +9,7 @@ use chrono::{DateTime, Utc};
 use futures::future::try_join_all;
 use serde::Serialize;
 use std::collections::HashMap;
+use wavesexchange_log::info;
 
 static PG_MAX_BIGINT: i64 = 9223372036854775807;
 
@@ -44,13 +45,14 @@ pub enum AssetDistribution {
 }
 
 //uid, asset_id, height, task_state, state_updated, error_message
+#[derive(Debug)]
 pub struct AssetDistributionTask {
-    uid: i64,
-    asset_id: String,
-    height: i32,
-    task_state: String,
-    state_updated: DateTime<Utc>,
-    error_message: String,
+    pub uid: i64,
+    pub asset_id: String,
+    pub height: i32,
+    pub task_state: String,
+    pub state_updated: DateTime<Utc>,
+    pub error_message: String,
 }
 
 pub async fn get_uids_from_req(
@@ -140,30 +142,6 @@ pub async fn get_balances_by_pairs(
     Ok(res)
 }
 
-pub async fn asset_distribution_exists(
-    db: &PooledDb,
-    asset_id: &String,
-    height: &i32,
-) -> Result<bool, AppError> {
-    let sql = "SELECT table_name FROM information_schema.tables WHERE  table_schema = $1 AND table_name = $2";
-
-    let table_name = format!("{}_{}", asset_id, height);
-    let conn = conn!(db);
-
-    let ret: Vec<String> = conn
-        .query(sql, &[&crate::ASSET_DISTRIBUTION_PG_SCHEMA, &table_name])
-        .await
-        .map_err(|err| AppError::DbError(err.to_string()))?
-        .iter()
-        .map(|r| r.get(0))
-        .collect();
-
-    if ret.is_empty() {
-        return Ok(false);
-    }
-    Ok(true)
-}
-
 pub async fn asset_distribution_task_by_asset_id_height(
     db: &PooledDb,
     asset_id: &String,
@@ -225,16 +203,23 @@ pub async fn asset_distribution(
     height: &i32,
     after_uid: Option<i64>,
 ) -> Result<AssetDistribution, AppError> {
-    if !asset_distribution_exists(&db, &asset_id, &height).await? {
-        match asset_distribution_task_by_asset_id_height(&db, &asset_id, &height).await? {
-            Some(_) => return Ok(AssetDistribution::InProgress),
-            None => return Ok(AssetDistribution::NoData),
+    let task = asset_distribution_task_by_asset_id_height(&db, &asset_id, &height).await?;
+    info!("{:?}", task);
+
+    match task.as_ref() {
+        Some(t) => {
+            if !t.task_state.eq("done") {
+                return Ok(AssetDistribution::InProgress);
+            }
         }
-    }
+        None => return Ok(AssetDistribution::NoData),
+    };
+
+    let task = task.unwrap();
 
     let sql = format!(
         "select ad.uid, uaddr.address, bhm.amount, bhm.height
-        from {}.{}_{} ad
+        from {}.task_uid_{}_{} ad
         inner join balance_history_max_uids_per_height bhm
             on ad.max_uid = bhm.uid
         inner join unique_address uaddr on ad.address_id = uaddr.uid
@@ -242,7 +227,7 @@ pub async fn asset_distribution(
         order by ad.uid 
         limit $2",
         crate::ASSET_DISTRIBUTION_PG_SCHEMA,
-        asset_id,
+        task.uid,
         height
     );
 
@@ -308,7 +293,13 @@ async fn distinct_assets_by_address(
     db: &PooledDb,
     address: &String,
 ) -> Result<Vec<BalanceEntry>, AppError> {
-    let sql = "select address, asset_id from balance_history where address = $1 group by 1, 2";
+    let sql = "select ad.address, ast.asset_id 
+                from balance_history b
+                    inner join unique_assets ast on b.asset_id = ast.uid
+                    inner join unique_address ad on b.address_id = ad.uid
+                where 
+                    address_id = (select uid from unique_address where address = $1) 
+                group by 1, 2";
 
     let conn = conn!(db);
 

@@ -132,12 +132,6 @@ async fn bh_handler_asset_distribution(
     rdb: Pool<PostgresConnectionManager<NoTls>>,
     get_params: HashMap<String, String>,
 ) -> Result<(List<AssetDistributionItem>, warp::http::StatusCode), reject::Rejection> {
-    let mut asset = asset_id;
-
-    if asset.eq("WAVES".into()) {
-        asset = "".into();
-    }
-
     let after_uid: Option<i64> = match get_params.get("after".into()) {
         Some(a) => match (*a).parse::<i64>() {
             Ok(ii) => Some(ii),
@@ -146,7 +140,8 @@ async fn bh_handler_asset_distribution(
         _ => None,
     };
 
-    let d = repo::asset_distribution(&rdb, &asset, &(height as i32), after_uid).await?;
+    let d = repo::asset_distribution(&rdb, &asset_id, &(height as i32), after_uid).await?;
+
     let mut http_code = warp::http::StatusCode::OK;
 
     let ret = match d {
@@ -179,11 +174,5 @@ async fn bh_handler_asset_distribution_task(
     height: u32,
     rdb: Pool<PostgresConnectionManager<NoTls>>,
 ) -> Result<warp::http::StatusCode, reject::Rejection> {
-    let mut asset = asset_id;
-
-    if asset.eq("WAVES".into()) {
-        asset = "".into();
-    }
-
-    Ok(repo::create_asset_distribution_task(&rdb, &asset, &(height as i32)).await?)
+    Ok(repo::create_asset_distribution_task(&rdb, &asset_id, &(height as i32)).await?)
 }

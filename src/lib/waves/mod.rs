@@ -2,7 +2,6 @@ use bytes::{BufMut, BytesMut};
 use postgres_derive::{FromSql, ToSql};
 use sha3::Digest;
 use std::fmt;
-use tokio_postgres::types::{FromSql, ToSql};
 use waves_protobuf_schemas::waves::{
     block::Header,
     events::{
@@ -198,7 +197,6 @@ fn blake2b256(message: &[u8]) -> [u8; 32] {
         digest::{Input, VariableOutput},
         VarBlake2b,
     };
-    use std::convert::TryInto;
 
     let mut hasher = VarBlake2b::new(32).unwrap();
 
