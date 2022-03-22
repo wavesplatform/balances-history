@@ -44,6 +44,9 @@ fxhash = "0.2.1"
 itertools = "0.10.3"
 bb8-postgres="0.7.0"
 
+[patch.crates-io]
+log = {git = "https://github.com/rust-lang/log", tag = "0.4.14"}
+
 [lib]
 name = "lib"
 path = "src/lib/lib.rs"
