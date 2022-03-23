@@ -108,6 +108,14 @@ pub async fn process_task(
     );
     tr.query(&sql, &[]).await?;
 
+    let sql = format!(
+        "grant select on {}.task_uid_{}_{} to reader",
+        &crate::ASSET_DISTRIBUTION_PG_SCHEMA,
+        &task.uid,
+        &task.height
+    );
+    tr.query(&sql, &[]).await?;
+
     set_task_done(&tr, &task.uid).await?;
 
     Ok(1)
