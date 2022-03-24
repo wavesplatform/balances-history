@@ -204,7 +204,6 @@ pub async fn asset_distribution(
     after_uid: Option<i64>,
 ) -> Result<AssetDistribution, AppError> {
     let task = asset_distribution_task_by_asset_id_height(&db, &asset_id, &height).await?;
-    info!("{:?}", task);
 
     match task.as_ref() {
         Some(t) => {
@@ -218,10 +217,8 @@ pub async fn asset_distribution(
     let task = task.unwrap();
 
     let sql = format!(
-        "select ad.uid, uaddr.address, bhm.amount, bhm.height
+        "select ad.uid, uaddr.address, ad.amount, ad.height
         from {}.task_uid_{}_{} ad
-        inner join balance_history_max_uids_per_height bhm
-            on ad.max_uid = bhm.uid
         inner join unique_address uaddr on ad.address_id = uaddr.uid
         where ad.uid > $1
         order by ad.uid 

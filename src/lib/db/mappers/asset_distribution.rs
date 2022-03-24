@@ -63,6 +63,7 @@ pub async fn process_task(
 
     info!("processing asset distribution task: {:?}", &task);
 
+    info!("distribution task: drop table distribution_hist");
     tr.query("drop table if exists distribution_hist".into(), &[])
         .await?;
 
@@ -71,33 +72,51 @@ pub async fn process_task(
         select address_id, max(uid) max_uid, max(balance_history_uid) max_bh_uid
             from balance_history_max_uids_per_height
             where
-                asset_id = (select uid from unique_assets where asset_id = $1)
-            and height < $2
+                asset_id = $1
+            and height <= $2
             group by address_id";
 
-    tr.query(sql.into(), &[&task.asset_id, &task.height])
+    info!("distribution task: create table distribution_hist ... ");
+    tr.query(sql.into(), &[&task.asset_uid, &task.height])
         .await?;
 
     let sql = "create index on distribution_hist(max_bh_uid)";
+    info!("distribution task: {}", &sql);
     tr.query(sql.into(), &[]).await?;
 
     let sql = "alter table distribution_hist add column amount numeric(100,0)";
+    info!("distribution task: {}", &sql);
     tr.query(sql.into(), &[]).await?;
 
     let sql = "alter table distribution_hist add column height INTEGER";
+    info!("distribution task: {}", &sql);
     tr.query(sql.into(), &[]).await?;
 
     let sql = "update distribution_hist h
             set amount = bh.amount,
                 height = bh.height
         from balance_history_max_uids_per_height bh
-        where h.max_bh_uid = bh.balance_history_uid";
-    tr.query(sql.into(), &[]).await?;
+        where 
+        h.max_bh_uid = bh.balance_history_uid
+            and h.address_id = bh.address_id 
+            and bh.asset_id = $1";
 
+    info!("distribution task: calculating balances ...");
+    tr.query(sql.into(), &[&task.asset_uid]).await?;
+
+    info!("distribution task: deleting null or zero balances ...");
+    tr.query(
+        "delete from distribution_hist where amount <= 0::numeric(100,0) or amount is null".into(),
+        &[],
+    )
+    .await?;
+
+    info!("distribution task: saving distribution_hist to table ...");
     let sql = format!(
         "create table {}.task_uid_{}_{} as select row_number() over(order by amount desc) as uid, * from distribution_hist order by amount desc",
         &crate::ASSET_DISTRIBUTION_PG_SCHEMA, &task.uid, &task.height
     );
+
     tr.query(&sql, &[]).await?;
 
     let sql = format!(
@@ -106,6 +125,8 @@ pub async fn process_task(
         &task.uid,
         &task.height
     );
+
+    info!("distribution task: {}", &sql);
     tr.query(&sql, &[]).await?;
 
     let sql = format!(
@@ -114,6 +135,7 @@ pub async fn process_task(
         &task.uid,
         &task.height
     );
+    info!("distribution task: {}", &sql);
     tr.query(&sql, &[]).await?;
 
     set_task_done(&tr, &task.uid).await?;

@@ -8,11 +8,12 @@ use wavesexchange_log::{error, info, warn};
 pub struct AssetDistributionTask {
     pub uid: i64,
     pub asset_id: String,
+    pub asset_uid: i64,
     pub height: i32,
 }
 
 pub async fn next_task(db: &Db) -> Result<Option<AssetDistributionTask>, anyhow::Error> {
-    let sql = "select adt.uid, ua.asset_id, adt.height 
+    let sql = "select adt.uid, ua.uid as asset_uid, ua.asset_id, adt.height 
                         from asset_distribution_tasks adt
                         inner join unique_assets ua 
                             on adt.asset_id = ua.asset_id
@@ -28,8 +29,9 @@ pub async fn next_task(db: &Db) -> Result<Option<AssetDistributionTask>, anyhow:
         .iter()
         .map(|r| AssetDistributionTask {
             uid: r.get(0),
-            asset_id: r.get(1),
-            height: r.get(2),
+            asset_uid: r.get(1),
+            asset_id: r.get(2),
+            height: r.get(3),
         })
         .nth(0);
 
@@ -67,6 +69,7 @@ pub async fn create(
         .map(|r| AssetDistributionTask {
             uid: r.get(0),
             asset_id: r.get(1),
+            asset_uid: 0,
             height: r.get(2),
         })
         .nth(0);
