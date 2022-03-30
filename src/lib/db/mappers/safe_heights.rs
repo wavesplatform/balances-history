@@ -6,6 +6,10 @@ pub async fn save(
     table_name: &str,
     height: u32,
 ) -> Result<(), anyhow::Error> {
+    if height < crate::consumer::SAFE_HEIGHT_OFFSET {
+        return Ok(());
+    }
+
     let sql = r#"
     insert into safe_heights as sf (table_name, height)
     values ($1, $2) 

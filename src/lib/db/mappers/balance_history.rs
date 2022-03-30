@@ -34,7 +34,7 @@ pub async fn save_bulk(
 
             let asset_id = asset_ids
                 .get(&b.asset_id)
-                .expect("asset_id not found in map");
+                .expect(format!("asset_id: {} not found in map", &b.asset_id).as_str());
 
             // vals.push_str(
             //     format!(

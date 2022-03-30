@@ -36,7 +36,7 @@ async fn init_db_data(db: &mut Db) -> Result<(), anyhow::Error> {
     .await?;
 
     let min_safe_height = tr
-        .query("select min(height) from safe_heights", &[])
+        .query("select coalesce(min(height),0) from safe_heights", &[])
         .await?
         .iter()
         .map(|r| r.get::<usize, i32>(0))

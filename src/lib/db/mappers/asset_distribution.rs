@@ -8,7 +8,7 @@ use super::blocks_microblocks;
 // return task rows processed on success
 pub async fn refresh(db: &mut Db) -> Result<u8, anyhow::Error> {
     info!("checking new tasks for asset distribution");
-    let max_height = blocks_microblocks::get_last_height(db).await.unwrap();
+    let max_height = blocks_microblocks::get_last_height(db).await.unwrap_or(0);
 
     match distribution_task::next_task(&db).await? {
         Some(t) => {

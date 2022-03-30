@@ -1,4 +1,15 @@
 table! {
+    asset_distribution_tasks (uid) {
+        uid -> Int8,
+        asset_id -> Text,
+        height -> Nullable<Int4>,
+        task_state -> Nullable<Enum_task_state_ad>,
+        state_updated -> Timestamp,
+        error_message -> Nullable<Text>,
+    }
+}
+
+table! {
     balance_history (uid) {
         uid -> Int8,
         block_uid -> Int8,
@@ -69,6 +80,7 @@ joinable!(balance_history -> blocks_microblocks (block_uid));
 joinable!(balance_history_max_uids_per_height -> balance_history (balance_history_uid));
 
 allow_tables_to_appear_in_same_query!(
+    asset_distribution_tasks,
     balance_history,
     balance_history_max_uids_per_height,
     blocks_microblocks,

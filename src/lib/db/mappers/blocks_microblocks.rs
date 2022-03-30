@@ -47,9 +47,9 @@ pub async fn save(
         .await
         .unwrap();
 
-    let cfg = ARC_SETTINGS.read().await;
+    // let cfg = ARC_SETTINGS.read().await;
 
-    println!("test change settings, {:?}", cfg.test_changed);
+    // println!("test change settings, {:?}", cfg.test_changed);
 
     rows[0].get(0)
 }

@@ -1,24 +1,38 @@
-use std::collections::HashMap;
-
 use crate::waves::bu::balance_updates::BalanceHistory;
+use itertools::Itertools;
+use std::collections::{HashMap, HashSet};
 use tokio_postgres::{types::ToSql, Transaction};
 
 const BULK_CHUNK_SIZE: usize = 5000;
+const WAVES_ASSET_ID: i64 = 1;
 
 pub async fn merge_bulk(
     tr: &Transaction<'_>,
     bh: &Vec<BalanceHistory>,
 ) -> Result<HashMap<String, i64>, anyhow::Error> {
-    let mut asset_uid_map: HashMap<String, i64> = HashMap::with_capacity(bh.len());
+    let distinct_assets: Vec<&str> = bh
+        .into_iter()
+        .filter(|b| !(b.asset_id.is_empty() || b.asset_id.eq(&"WAVES")))
+        .map(|b| b.asset_id.as_ref())
+        .unique()
+        .collect();
 
-    for ch in bh.chunks(BULK_CHUNK_SIZE).into_iter() {
+    let mut asset_uid_map: HashMap<String, i64> = HashMap::with_capacity(distinct_assets.len() + 2);
+    asset_uid_map.insert("".into(), WAVES_ASSET_ID);
+    asset_uid_map.insert("WAVES".into(), WAVES_ASSET_ID);
+
+    for ch in distinct_assets.chunks(BULK_CHUNK_SIZE).into_iter() {
         let mut vals = "".to_owned();
         let mut params: Vec<&(dyn ToSql + Sync)> = Vec::with_capacity(BULK_CHUNK_SIZE);
 
-        ch.iter().enumerate().for_each(|(idx, b)| {
+        ch.iter().enumerate().for_each(|(idx, asset)| {
             vals.push_str(format!("(${}),", idx + 1,).as_str());
-            params.push(&b.asset_id);
+            params.push(asset);
         });
+
+        if params.is_empty() {
+            return Ok(asset_uid_map);
+        }
 
         let to_trim: &[_] = &[',', ' '];
         let vals = vals.trim_end_matches(to_trim).to_owned();

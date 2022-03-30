@@ -57,7 +57,7 @@ impl Analyzer {
     }
 
     pub async fn send(&self, block: &BlockchainUpdateInfo) {
-        self.sender.send(block.clone()).await.unwrap();
+        self.sender.send(block.clone()).await.expect("send failed");
     }
 }
 
