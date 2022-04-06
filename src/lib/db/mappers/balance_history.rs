@@ -27,7 +27,7 @@ pub async fn save_bulk(
         let mut vals = "".to_owned();
         // let mut params: Vec<&(dyn ToSql + Sync)> = Vec::with_capacity(BULK_CHUNK_SIZE);
 
-        ch.into_iter().enumerate().for_each(|(_idx, b)| {
+        ch.into_iter().enumerate().for_each(|(idx, b)| {
             let address_id = address_ids
                 .get(&b.address)
                 .expect("address not found in map");
@@ -56,8 +56,12 @@ pub async fn save_bulk(
             // запихнём числа в запрос у нас всё безопастно так как всё int
             vals.push_str(
                 format!(
-                    " ({},{},{},{}),",
-                    b.block_uid, b.amount, address_id, asset_id,
+                    " ({},{},{},{},{}),",
+                    idx + 1,
+                    b.block_uid,
+                    b.amount,
+                    address_id,
+                    asset_id,
                 )
                 .as_str(),
             );
@@ -72,11 +76,13 @@ pub async fn save_bulk(
         // внутренний select должет пытаться взять блокировку blocks_microblocks по uid, так как
         // в соседнем соединении после начала нашей транзакции может прийти
         // blockchain-rollback а мы вставляем уже несуществующий block_uid
+        // chunk_uid нужен для того что бы сохранять порядок вставляемых записей с порядком следования в массиве chunk
 
         let sql = format!("insert into balance_history(block_uid, amount, address_id, asset_id) 
                                     select bm.uid, vals.amount, vals.address_id, vals.asset_id
-                                        from (values {vals}) as vals(block_uid, amount, address_id, asset_id)
+                                        from (values {vals}) as vals(chunk_uid, block_uid, amount, address_id, asset_id)
                                         inner join blocks_microblocks bm on bm.uid = vals.block_uid
+                                        order by chunk_uid
                                     for update
                                 returning uid");
 

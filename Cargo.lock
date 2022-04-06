@@ -142,7 +142,7 @@ dependencies = [
  "tokio-postgres",
  "tonic",
  "warp",
- "waves-protobuf-schemas 1.3.3 (git+https://github.com/wavesplatform/protobuf-schemas?rev=dc1597077cbf55aac4cd514f5510ba346c45b361)",
+ "waves-protobuf-schemas 1.3.3 (git+https://github.com/wavesplatform/protobuf-schemas?tag=v1.3.2)",
  "wavesexchange_apis",
  "wavesexchange_log 0.2.0 (git+https://github.com/waves-exchange/wavesexchange-rs?tag=wavesexchange_log/0.2.0)",
  "wavesexchange_warp 0.10.0",
@@ -2550,7 +2550,7 @@ checksum = "3d958d035c4438e28c70e4321a2911302f10135ce78a9c7834c0cab4123d06a2"
 [[package]]
 name = "waves-protobuf-schemas"
 version = "1.3.3"
-source = "git+https://github.com/wavesplatform/protobuf-schemas?rev=44b306885be296bbfebcd37bef64b4dbbec8502a#44b306885be296bbfebcd37bef64b4dbbec8502a"
+source = "git+https://github.com/wavesplatform/protobuf-schemas?tag=v1.3.2#dc1597077cbf55aac4cd514f5510ba346c45b361"
 dependencies = [
  "prost",
  "tonic",
@@ -2560,7 +2560,7 @@ dependencies = [
 [[package]]
 name = "waves-protobuf-schemas"
 version = "1.3.3"
-source = "git+https://github.com/wavesplatform/protobuf-schemas?rev=dc1597077cbf55aac4cd514f5510ba346c45b361#dc1597077cbf55aac4cd514f5510ba346c45b361"
+source = "git+https://github.com/wavesplatform/protobuf-schemas?rev=44b306885be296bbfebcd37bef64b4dbbec8502a#44b306885be296bbfebcd37bef64b4dbbec8502a"
 dependencies = [
  "prost",
  "tonic",

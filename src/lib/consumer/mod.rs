@@ -6,11 +6,11 @@ use bu::blocks::Analyzer as BlockAnalyzer;
 use lazy_static::lazy_static;
 use settings::Settings;
 use std::{
-    sync::{Arc, RwLock, RwLockReadGuard},
+    sync::{Arc, RwLock},
     time::Instant,
 };
-use tokio::select;
-use wavesexchange_apis::{rates_service::dto::Rate, HttpClient as ApiHttpClient, RatesSvcApi};
+use tokio::{pin, select};
+use wavesexchange_apis::{HttpClient as ApiHttpClient, RatesSvcApi};
 use wavesexchange_log::{info, warn};
 
 use waves_protobuf_schemas::waves::events::grpc::{

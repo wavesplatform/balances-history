@@ -20,7 +20,7 @@ tokio-postgres = { version = "0.7.5", features = ["with-chrono-0_4", "with-serde
 postgres-derive = { version = "0.4.1"}
 postgres-types = { version = "0.2.2"}
 async-trait = { version = "0.1.52"}
-waves-protobuf-schemas = { git = "https://github.com/wavesplatform/protobuf-schemas", rev="dc1597077cbf55aac4cd514f5510ba346c45b361"}
+waves-protobuf-schemas = { git = "https://github.com/wavesplatform/protobuf-schemas", tag = "v1.3.2"}
 diesel = { version= "1.4.8", features =["postgres"] }
 diesel_migrations = "1.4.0"
 #bigdecimal = { version = "0.3.0", features = ["serde"] }

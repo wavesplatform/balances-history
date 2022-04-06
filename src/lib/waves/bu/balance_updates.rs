@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::consumer::SETTINGS;
 use crate::db::{
     mappers::{
@@ -10,7 +12,7 @@ use crate::waves::{BlockType, BlockchainUpdateInfo};
 use rust_decimal::Decimal;
 use tokio::sync::mpsc::{self, Sender};
 use waves_protobuf_schemas::waves::{events::state_update::BalanceUpdate, Amount};
-use wavesexchange_log::info;
+use wavesexchange_log::{error, info};
 
 const CHUNK_SIZE: usize = 1000;
 const BH_TABLE_NAME: &str = "balance_history";
@@ -77,6 +79,7 @@ async fn save_chunk(db: &mut Db, chunk: &Vec<BalanceHistory>) -> Result<(), anyh
     }
 
     tr.commit().await?;
+
     Ok(())
 }
 
