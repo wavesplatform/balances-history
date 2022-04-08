@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::consumer::SETTINGS;
 use crate::db::{
     mappers::{

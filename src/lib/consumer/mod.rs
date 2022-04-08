@@ -9,9 +9,12 @@ use std::{
     sync::{Arc, RwLock},
     time::Instant,
 };
-use tokio::{pin, select};
+use tokio::{
+    select,
+    time::{self as tokio_time, Duration as tokio_duration, Instant as tokio_instant},
+};
 use wavesexchange_apis::{HttpClient as ApiHttpClient, RatesSvcApi};
-use wavesexchange_log::{info, warn};
+use wavesexchange_log::{error, info, warn};
 
 use waves_protobuf_schemas::waves::events::grpc::{
     blockchain_updates_api_client::BlockchainUpdatesApiClient, SubscribeRequest,
@@ -22,6 +25,7 @@ use crate::{
     waves::{bu, BlockchainUpdateInfo},
 };
 pub const SAFE_HEIGHT_OFFSET: u32 = 20;
+pub const GRPC_STREAM_AWAIT_TIMEOUT_SECS: u64 = 300;
 
 pub struct ArcSettings {
     s: Arc<RwLock<Settings>>,
@@ -111,8 +115,16 @@ pub async fn run(
     let config_update_handle = tokio::spawn(async move { run_config_updater().await });
 
     select! {
-        Err(err) = consumer_handle => {
-            panic!("consumer handler panic: {}", err);
+        ce = consumer_handle => {
+            match ce {
+                Err(err) => {
+                    panic!("consumer handler panic: {}", err);
+                },
+                Ok(_) => {
+                    panic!("consumer handler exit without error");
+                }
+            }
+
         },
         Err(err) = distribution_handle => {
             panic!("asset distribution handler panic: {}", err);
@@ -148,8 +160,23 @@ async fn run_blockchain_analyze(
     let mut block_analyzer = BlockAnalyzer::new().await;
     let balance_analyzer = BalanceAnalyzer::new(1000).await;
 
+    let sleep_duration = tokio_duration::from_secs(GRPC_STREAM_AWAIT_TIMEOUT_SECS);
+    let sleep = tokio_time::sleep(sleep_duration);
+    tokio::pin!(sleep);
+
     loop {
-        let mut block: BlockchainUpdateInfo = stream.message().await?.into();
+        sleep.as_mut().reset(tokio_instant::now() + sleep_duration);
+
+        let mut block: BlockchainUpdateInfo;
+
+        select! {
+                msg = stream.message() => block = msg?.into(),
+
+                _ = &mut sleep => {
+                error!("grpc stream message await timeout for {} seconds. Exiting.", GRPC_STREAM_AWAIT_TIMEOUT_SECS);
+                break;
+            }
+        }
 
         let processing_start = Instant::now();
 
@@ -170,6 +197,8 @@ async fn run_blockchain_analyze(
             processing_duration.as_millis(),
         );
     }
+
+    Ok(())
 }
 
 async fn run_config_updater() -> Result<(), anyhow::Error> {

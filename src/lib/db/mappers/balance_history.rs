@@ -36,22 +36,6 @@ pub async fn save_bulk(
                 .get(&b.asset_id)
                 .expect(format!("asset_id: {} not found in map", &b.asset_id).as_str());
 
-            // vals.push_str(
-            //     format!(
-            //         " (${},${},${},${}),",
-            //         4 * _idx + 1,
-            //         4 * _idx + 2,
-            //         4 * _idx + 3,
-            //         4 * _idx + 4
-            //     )
-            //     .as_str(),
-            // );
-            //
-            // params.push(&b.block_uid);
-            // params.push(&b.amount);
-            // params.push(address_id);
-            // params.push(asset_id);
-
             // непонятно почему но биндинг с таким запросом не работает поэтому
             // запихнём числа в запрос у нас всё безопастно так как всё int
             vals.push_str(
