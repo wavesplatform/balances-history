@@ -7,6 +7,7 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use futures::future::try_join_all;
+use postgres_types::ToSql;
 use serde::Serialize;
 use std::collections::HashMap;
 use wavesexchange_log::info;
@@ -327,13 +328,14 @@ async fn balance_query(
             where b.block_uid < $1
                 and b.address_id = (select uid from unique_address where address = $2)
                 and b.asset_id = (select uid from unique_assets where asset_id = $3)
-            order by block_uid desc 
+            order by b.uid desc 
             limit 1";
 
     let conn = conn!(db);
+    let params: Vec<&(dyn ToSql + Sync)> = vec![&uid, &e.address, &e.asset_id];
 
     let rows = conn
-        .query(sql, &[&uid, &e.address, &e.asset_id])
+        .query(sql, &params)
         .await
         .map_err(|err| AppError::DbError(err.to_string()))?;
 
