@@ -174,5 +174,17 @@ async fn bh_handler_asset_distribution_task(
     height: u32,
     rdb: Pool<PostgresConnectionManager<NoTls>>,
 ) -> Result<warp::http::StatusCode, reject::Rejection> {
+    let last_height = repo::last_solidified_height(&rdb)
+        .await
+        .map_err(|err| AppError::DbError(err.to_string()))?;
+
+    if height > last_height - 21 {
+        return Err(AppError::InvalidQueryParams(format!(
+            "height to big to crate asset distribution max height at the moment is {}",
+            last_height - 21
+        ))
+        .into());
+    }
+
     Ok(repo::create_asset_distribution_task(&rdb, &asset_id, &(height as i32)).await?)
 }

@@ -69,11 +69,12 @@ pub async fn process_task(
 
     let sql = "
         create table distribution_hist as
-        select address_id, max(uid) max_uid, max(balance_history_uid) max_bh_uid
-            from balance_history_max_uids_per_height
-            where
-                asset_id = $1
-            and height <= $2
+
+        select bh.address_id, max(bh.uid) max_bh_uid
+            from balance_history bh 
+            inner join blocks_microblocks b on bh.block_uid = b.uid
+            where bh.asset_id = $1
+            and b.height <= $2
             group by address_id";
 
     info!("distribution task: create table distribution_hist ... ");
@@ -94,11 +95,12 @@ pub async fn process_task(
 
     let sql = "update distribution_hist h
             set amount = bh.amount,
-                height = bh.height
-        from balance_history_max_uids_per_height bh
+                height = b.height
+        from balance_history bh 
+            inner join blocks_microblocks b on bh.block_uid = b.uid
         where 
-        h.max_bh_uid = bh.balance_history_uid
-            and h.address_id = bh.address_id 
+        h.max_bh_uid = bh.uid
+            and h.address_id = bh.address_id
             and bh.asset_id = $1";
 
     info!("distribution task: calculating balances ...");

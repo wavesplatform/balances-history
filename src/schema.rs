@@ -20,18 +20,6 @@ table! {
 }
 
 table! {
-    balance_history_max_uids_per_height (uid) {
-        uid -> Int8,
-        balance_history_uid -> Int8,
-        asset_id -> Nullable<Int8>,
-        address_id -> Nullable<Int8>,
-        block_uid -> Nullable<Int8>,
-        height -> Nullable<Int4>,
-        amount -> Nullable<Numeric>,
-    }
-}
-
-table! {
     blocks_microblocks (uid) {
         uid -> Int8,
         id -> Text,
@@ -77,12 +65,10 @@ table! {
 }
 
 joinable!(balance_history -> blocks_microblocks (block_uid));
-joinable!(balance_history_max_uids_per_height -> balance_history (balance_history_uid));
 
 allow_tables_to_appear_in_same_query!(
     asset_distribution_tasks,
     balance_history,
-    balance_history_max_uids_per_height,
     blocks_microblocks,
     blocks_rollbacks,
     safe_heights,

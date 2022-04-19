@@ -1,9 +1,6 @@
 use crate::consumer::SETTINGS;
 use crate::db::{
-    mappers::{
-        balance_history, balance_history_max_uids_per_height, safe_heights, unique_address,
-        unique_assets,
-    },
+    mappers::{balance_history, safe_heights, unique_address, unique_assets},
     *,
 };
 use crate::waves::{BlockType, BlockchainUpdateInfo};
@@ -69,8 +66,6 @@ async fn save_chunk(db: &mut Db, chunk: &Vec<BalanceHistory>) -> Result<(), anyh
 
     let bh_uids = balance_history::save_bulk(&tr, &chunk, &assets_map, &address_map).await?;
     if !bh_uids.is_empty() {
-        balance_history_max_uids_per_height::fill_from_balance_history(&tr, &bh_uids).await?;
-
         let bh_min_height = chunk.iter().map(|i| i.block_height).min().unwrap_or(1);
         info!("bulk saved balance_history records: {}", bh_uids.len());
         safe_heights::save(&tr, BH_TABLE_NAME, bh_min_height - 1).await?;

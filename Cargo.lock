@@ -156,22 +156,22 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
 name = "bb8"
-version = "0.7.1"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e9f4fa9768efd269499d8fba693260cfc670891cf6de3adc935588447a77cc8"
+checksum = "1627eccf3aa91405435ba240be23513eeca466b5dc33866422672264de061582"
 dependencies = [
  "async-trait",
  "futures-channel",
  "futures-util",
- "parking_lot 0.11.2",
+ "parking_lot 0.12.0",
  "tokio",
 ]
 
 [[package]]
 name = "bb8-postgres"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61fdf56d52b2cca401d2380407e5c35d3d25d3560224ecf74d6e4ca13e51239b"
+checksum = "f0a22f6e28b0cf30a1861b69e3defedad0b98991a5bc54ab11bb0c2e20927686"
 dependencies = [
  "async-trait",
  "bb8",
@@ -2569,8 +2569,8 @@ dependencies = [
 
 [[package]]
 name = "wavesexchange_apis"
-version = "0.1.0"
-source = "git+https://github.com/waves-exchange/wavesexchange-rs?rev=0df115918feaf1e56f8233c5d96e712d5cb17489#0df115918feaf1e56f8233c5d96e712d5cb17489"
+version = "0.1.2"
+source = "git+https://github.com/waves-exchange/wavesexchange-rs?tag=wavesexchange_apis/0.1.2#e889843a69781ecb21ba186b3261160017fff3f7"
 dependencies = [
  "async-recursion",
  "base64",
@@ -2625,7 +2625,7 @@ dependencies = [
 [[package]]
 name = "wavesexchange_log"
 version = "0.5.0"
-source = "git+https://github.com/waves-exchange/wavesexchange-rs?rev=0df115918feaf1e56f8233c5d96e712d5cb17489#0df115918feaf1e56f8233c5d96e712d5cb17489"
+source = "git+https://github.com/waves-exchange/wavesexchange-rs?tag=wavesexchange_apis/0.1.2#e889843a69781ecb21ba186b3261160017fff3f7"
 dependencies = [
  "chrono",
  "once_cell",
@@ -2653,7 +2653,7 @@ dependencies = [
 [[package]]
 name = "wavesexchange_warp"
 version = "0.12.3"
-source = "git+https://github.com/waves-exchange/wavesexchange-rs?rev=0df115918feaf1e56f8233c5d96e712d5cb17489#0df115918feaf1e56f8233c5d96e712d5cb17489"
+source = "git+https://github.com/waves-exchange/wavesexchange-rs?tag=wavesexchange_apis/0.1.2#e889843a69781ecb21ba186b3261160017fff3f7"
 dependencies = [
  "futures",
  "once_cell",

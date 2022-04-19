@@ -315,6 +315,26 @@ async fn distinct_assets_by_address(
     Ok(ret)
 }
 
+pub async fn last_solidified_height(db: &PooledDb) -> Result<u32, anyhow::Error> {
+    let sql =
+        "select height from blocks_microblocks where is_solidified = true order by uid desc limit 1";
+
+    let conn = conn!(db);
+
+    let rows = conn
+        .query(sql, &[])
+        .await
+        .map_err(|err| AppError::DbError(err.to_string()))?;
+
+    if rows.len() < 1 {
+        return Ok(0);
+    }
+
+    let h: i32 = rows[0].get(0);
+
+    Ok(h as u32)
+}
+
 async fn balance_query(
     db: &PooledDb,
     uid: &i64,
@@ -325,7 +345,7 @@ async fn balance_query(
                 inner join blocks_microblocks bm on b.block_uid = bm.uid
                 inner join unique_assets ast on b.asset_id = ast.uid
                 inner join unique_address ad on b.address_id = ad.uid
-            where b.block_uid < $1
+            where b.block_uid <= $1
                 and b.address_id = (select uid from unique_address where address = $2)
                 and b.asset_id = (select uid from unique_assets where asset_id = $3)
             order by b.uid desc 

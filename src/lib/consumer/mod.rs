@@ -13,7 +13,7 @@ use tokio::{
     select,
     time::{self as tokio_time, Duration as tokio_duration, Instant as tokio_instant},
 };
-use wavesexchange_apis::{HttpClient as ApiHttpClient, RatesSvcApi};
+use wavesexchange_apis::{HttpClient as ApiHttpClient, RatesService};
 use wavesexchange_log::{error, info, warn};
 
 use waves_protobuf_schemas::waves::events::grpc::{
@@ -29,7 +29,7 @@ pub const GRPC_STREAM_AWAIT_TIMEOUT_SECS: u64 = 300;
 
 pub struct ArcSettings {
     s: Arc<RwLock<Settings>>,
-    rates_api_client: ApiHttpClient<RatesSvcApi>,
+    rates_api_client: ApiHttpClient<RatesService>,
 }
 
 #[async_trait]
@@ -44,7 +44,7 @@ impl ArcSettingsTrait for ArcSettings {
     fn init() -> Self {
         let s = Settings::init();
 
-        let rates_api_client = ApiHttpClient::<RatesSvcApi>::builder()
+        let rates_api_client = ApiHttpClient::<RatesService>::builder()
             .with_base_url("https://waves.exchange/api/v1")
             .build();
 
@@ -59,28 +59,59 @@ impl ArcSettingsTrait for ArcSettings {
         (*g).config.clone()
     }
     async fn update(&self) {
-        let assets = vec![
-            "DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p".to_string(),
-            "DSbbhLsSTeDg5Lsiufk2Aneh3DjVqJuPr2M9uU1gwy5p".to_string(),
-            "C1iWsKGqLwjHUndiQ7iXpdmPum9PeCDFfyXBdJJosDRS".to_string(),
-            "DUk2YTxhRoAqMJLus4G2b3fR8hMHVh6eiyFx5r29VR6t".to_string(),
-            "474jTeYx2r2Va35794tCScAXWJG9hU2HcgxzMowaZUnu".to_string(),
-            "Atqv59EYzjFGuitKVnMRk6H8FukjoV3ktPorbEys25on".to_string(),
-            "6nSpVyNH7yM69eg446wrQR94ipbbcmZMU1ENPwanC97g".to_string(),
-            "HZk1mbfuJpmxU1Fs4AX5MWLVYtctsNcg6e2C6VKqK8zk".to_string(),
-            "34N9YcEETLWn93qYQ64EsP1x89tSruJU44RrEMSXXEPJ".to_string(),
-            "8LQW8f7P5d5PZM7GtZEBgaqRPGSzS3DfPuiXrURJ4AJS".to_string(),
-            "7LMV3s1J4dKpMQZqge5sKYoFkZRLojnnU49aerqos4yg".to_string(),
-            "WAVES".to_string(),
-            "6XtHjpXbs9RRJP2Sr9GUyVqzACcby9TkThHXnjVC5CDJ".to_string(),
+        let pairs = vec![
+            ("WAVES", "DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p"),
+            (
+                "DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p",
+                "DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p",
+            ),
+            (
+                "DSbbhLsSTeDg5Lsiufk2Aneh3DjVqJuPr2M9uU1gwy5p",
+                "DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p",
+            ),
+            (
+                "C1iWsKGqLwjHUndiQ7iXpdmPum9PeCDFfyXBdJJosDRS",
+                "DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p",
+            ),
+            (
+                "DUk2YTxhRoAqMJLus4G2b3fR8hMHVh6eiyFx5r29VR6t",
+                "DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p",
+            ),
+            (
+                "474jTeYx2r2Va35794tCScAXWJG9hU2HcgxzMowaZUnu",
+                "DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p",
+            ),
+            (
+                "Atqv59EYzjFGuitKVnMRk6H8FukjoV3ktPorbEys25on",
+                "DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p",
+            ),
+            (
+                "6nSpVyNH7yM69eg446wrQR94ipbbcmZMU1ENPwanC97g",
+                "DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p",
+            ),
+            (
+                "HZk1mbfuJpmxU1Fs4AX5MWLVYtctsNcg6e2C6VKqK8zk",
+                "DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p",
+            ),
+            (
+                "34N9YcEETLWn93qYQ64EsP1x89tSruJU44RrEMSXXEPJ",
+                "DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p",
+            ),
+            (
+                "8LQW8f7P5d5PZM7GtZEBgaqRPGSzS3DfPuiXrURJ4AJS",
+                "DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p",
+            ),
+            (
+                "7LMV3s1J4dKpMQZqge5sKYoFkZRLojnnU49aerqos4yg",
+                "DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p",
+            ),
+            (
+                "6XtHjpXbs9RRJP2Sr9GUyVqzACcby9TkThHXnjVC5CDJ",
+                "DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p",
+            ),
         ];
 
-        let rates = (*self)
-            .rates_api_client
-            .exchange_rates(&assets, "DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p")
-            .await
-            .unwrap()
-            .unwrap();
+        let rates = (*self).rates_api_client.rates(pairs).await.unwrap();
 
         let rates: Vec<String> = rates
             .data
@@ -112,7 +143,7 @@ pub async fn run(
 
     let distribution_handle = tokio::spawn(async move { run_asset_distribution_exporter().await });
 
-    let config_update_handle = tokio::spawn(async move { run_config_updater().await });
+    // let config_update_handle = tokio::spawn(async move { run_config_updater().await });
 
     select! {
         ce = consumer_handle => {
@@ -129,9 +160,9 @@ pub async fn run(
         Err(err) = distribution_handle => {
             panic!("asset distribution handler panic: {}", err);
         },
-        Err(err) = config_update_handle => {
-            panic!("failed to reload config: {}", err);
-        },
+        // Err(err) = config_update_handle => {
+        //     panic!("failed to reload config: {}", err);
+        // },
     }
 }
 

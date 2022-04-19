@@ -5,4 +5,7 @@ pub enum AppError {
     InvalidQueryString(String),
     #[error("DbError: {0}")]
     DbError(String),
+
+    #[error("InvalidQueryParams: {0}")]
+    InvalidQueryParams(String),
 }
