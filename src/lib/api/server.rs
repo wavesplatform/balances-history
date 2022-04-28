@@ -3,17 +3,18 @@ use super::repo::AssetDistribution;
 use super::{
     api_custom_reject, repo, AssetDistributionItem, BalanceQuery, BalanceResponseItem, SETTINGS,
 };
-use bb8_postgres::{bb8::Pool, PostgresConnectionManager};
+use deadpool_postgres::Pool;
 use std::collections::HashMap;
 use std::convert::Infallible;
-use tokio_postgres::NoTls;
 use warp::{reject, Filter};
 use wavesexchange_log::{error, info};
-use wavesexchange_warp::error::{error_handler_with_serde_qs, handler, internal, validation};
-
+use wavesexchange_warp::error::{
+    error_handler_with_serde_qs, handler, internal, timeout, validation,
+};
 use wavesexchange_warp::log::access;
 use wavesexchange_warp::pagination::{List, PageInfo};
 
+const BALANCE_HISTORY_PAIRS_LIMIT: i32 = 100;
 const ERROR_CODES_PREFIX: u16 = 95;
 pub const DEFAULT_LIMIT: i64 = 100;
 
@@ -23,14 +24,7 @@ fn with_resource<T: Send + Sync + Clone + 'static>(
     warp::any().map(move || res.clone())
 }
 
-pub async fn run(rdb: Pool<PostgresConnectionManager<NoTls>>) -> Result<(), AppError> {
-    let into_response = handler(ERROR_CODES_PREFIX.clone(), |err: &AppError| match err {
-        AppError::InvalidQueryString(_) => {
-            validation::invalid_parameter(ERROR_CODES_PREFIX, "invalid query string")
-        }
-        _ => internal(ERROR_CODES_PREFIX),
-    });
-
+pub async fn run(rdb: Pool) -> Result<(), AppError> {
     let create_serde_qs_config = || serde_qs::Config::new(5, false);
 
     let bh = warp::path!("balance_history")
@@ -67,19 +61,42 @@ pub async fn run(rdb: Pool<PostgresConnectionManager<NoTls>>) -> Result<(), AppE
         .and_then(bh_handler_asset_distribution_task)
         .map(|s: warp::http::StatusCode| warp::reply::with_status("", s));
 
+    let log = warp::log::custom(access);
+
+    let error_handler = handler(ERROR_CODES_PREFIX, |err| match err {
+        AppError::ValidationErrorCustom(e) => {
+            let mut d = HashMap::with_capacity(1);
+            d.insert("height".into(), e.clone());
+            validation::invalid_parameter(ERROR_CODES_PREFIX, Some(d))
+        }
+        AppError::ValidationError(_error_message, error_details) => validation::invalid_parameter(
+            ERROR_CODES_PREFIX,
+            error_details.to_owned().map(|details| details.into()),
+        ),
+        AppError::DbError(error_message)
+            if error_message.to_string() == "canceling statement due to statement timeout" =>
+        {
+            error!("{:?}", err);
+            timeout(ERROR_CODES_PREFIX)
+        }
+        _ => {
+            error!("{:?}", err);
+            internal(ERROR_CODES_PREFIX)
+        }
+    });
+
     let routes = bh
         .or(bh_address)
         .or(bh_asset_distribution)
-        .or(bh_asset_distribution_task);
-
-    let srv = routes.with(warp::log::custom(access)).recover(move |rej| {
-        error!(&rej);
-        error_handler_with_serde_qs(ERROR_CODES_PREFIX, into_response.clone())(rej)
-    });
+        .or(bh_asset_distribution_task)
+        .recover(move |rej| {
+            error_handler_with_serde_qs(ERROR_CODES_PREFIX, error_handler.clone())(rej)
+        })
+        .with(log);
 
     info!("Starting api-server listening on :{}", SETTINGS.config.port);
 
-    warp::serve(srv)
+    warp::serve(routes)
         .run(([0, 0, 0, 0], SETTINGS.config.port))
         .await;
 
@@ -87,11 +104,19 @@ pub async fn run(rdb: Pool<PostgresConnectionManager<NoTls>>) -> Result<(), AppE
 }
 
 async fn bh_handler_by_pairs(
-    rdb: Pool<PostgresConnectionManager<NoTls>>,
+    rdb: Pool,
     req: BalanceQuery,
     get_params: HashMap<String, String>,
 ) -> Result<List<BalanceResponseItem>, reject::Rejection> {
     let uid = repo::get_uids_from_req(&rdb, &get_params).await?;
+
+    if req.address_asset_pairs.len() > BALANCE_HISTORY_PAIRS_LIMIT as usize {
+        return Err(AppError::ValidationErrorCustom(format!(
+            "balance/address pairs limited to {}",
+            BALANCE_HISTORY_PAIRS_LIMIT
+        ))
+        .into());
+    }
 
     let items = repo::get_balances_by_pairs(&rdb, &uid, &req).await?;
 
@@ -108,7 +133,7 @@ async fn bh_handler_by_pairs(
 
 async fn bh_handler_address(
     address: String,
-    rdb: Pool<PostgresConnectionManager<NoTls>>,
+    rdb: Pool,
     get_params: HashMap<String, String>,
 ) -> Result<List<BalanceResponseItem>, reject::Rejection> {
     let uid = repo::get_uids_from_req(&rdb, &get_params).await?;
@@ -129,7 +154,7 @@ async fn bh_handler_address(
 async fn bh_handler_asset_distribution(
     asset_id: String,
     height: u32,
-    rdb: Pool<PostgresConnectionManager<NoTls>>,
+    rdb: Pool,
     get_params: HashMap<String, String>,
 ) -> Result<(List<AssetDistributionItem>, warp::http::StatusCode), reject::Rejection> {
     let after_uid: Option<i64> = match get_params.get("after".into()) {
@@ -172,15 +197,15 @@ async fn bh_handler_asset_distribution(
 async fn bh_handler_asset_distribution_task(
     asset_id: String,
     height: u32,
-    rdb: Pool<PostgresConnectionManager<NoTls>>,
+    rdb: Pool,
 ) -> Result<warp::http::StatusCode, reject::Rejection> {
     let last_height = repo::last_solidified_height(&rdb)
         .await
         .map_err(|err| AppError::DbError(err.to_string()))?;
 
     if height > last_height - 21 {
-        return Err(AppError::InvalidQueryParams(format!(
-            "height to big to crate asset distribution max height at the moment is {}",
+        return Err(AppError::ValidationErrorCustom(format!(
+            "height to big to create asset distribution. max height at the moment is {}",
             last_height - 21
         ))
         .into());

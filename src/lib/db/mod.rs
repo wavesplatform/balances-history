@@ -3,11 +3,11 @@ pub mod mappers;
 
 use crate::config::postgres::PostgresConfig;
 use async_trait::async_trait;
-use bb8_postgres::{bb8::Pool, PostgresConnectionManager};
-use tokio_postgres::{types::ToSql, Client as TokioPgClient, Error, Row, Statement};
-use tokio_postgres::{NoTls, Transaction};
+use deadpool_postgres::Pool;
 
-pub type PooledDb = Pool<PostgresConnectionManager<NoTls>>;
+use tokio_postgres::{types::ToSql, Client as TokioPgClient, Error, Row, Statement, Transaction};
+
+pub type PooledDb = Pool;
 
 pub struct Db {
     client: TokioPgClient,
