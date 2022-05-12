@@ -82,6 +82,7 @@ pub async fn get_uids_from_req(
                 let tt: Result<DateTime<Utc>, _> = t.parse();
                 if tt.is_ok() {
                     sql = UidsQuery::ByTimestamp("select uid from blocks_microblocks where to_timestamp(time_stamp/1000) <= $1 order by uid desc limit 1", tt.unwrap());
+                    dbg!(&sql);
                 } else {
                     return Err(AppError::InvalidQueryString("invalid timestamp".into()));
                 }
@@ -113,9 +114,12 @@ pub async fn get_uids_from_req(
     }
 
     if rows.len() > 0 {
-        return Ok(rows[0].get::<'_, _, i64>(0));
+        let uid = rows[0].get::<'_, _, i64>(0);
+        dbg!(&uid);
+        return Ok(uid);
     }
 
+    dbg!(PG_MAX_BIGINT);
     Ok(PG_MAX_BIGINT)
 }
 
