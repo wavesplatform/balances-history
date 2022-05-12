@@ -61,6 +61,7 @@ pub async fn get_uids_from_req(
     params: &HashMap<String, String>,
 ) -> Result<i64, AppError> {
     let mut sql: UidsQuery = UidsQuery::None;
+    dbg!(&params);
 
     match params.get("height".into()) {
         Some(v) => {
