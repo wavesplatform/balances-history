@@ -61,7 +61,6 @@ pub async fn get_uids_from_req(
     params: &HashMap<String, String>,
 ) -> Result<i64, AppError> {
     let mut sql: UidsQuery = UidsQuery::None;
-    dbg!(&params);
 
     match params.get("height".into()) {
         Some(v) => {
@@ -82,8 +81,7 @@ pub async fn get_uids_from_req(
             Some(t) => {
                 let tt: Result<DateTime<Utc>, _> = t.parse();
                 if tt.is_ok() {
-                    sql = UidsQuery::ByTimestamp("select uid from blocks_microblocks where to_timestamp(time_stamp/1000) <= $1 order by uid desc limit 1", tt.unwrap());
-                    dbg!(&sql);
+                    sql = UidsQuery::ByTimestamp("select uid from blocks_microblocks where to_timestamp(time_stamp/1000) <= $1 and is_solidified order by uid desc limit 1", tt.unwrap());
                 } else {
                     return Err(AppError::InvalidQueryString("invalid timestamp".into()));
                 }
@@ -116,7 +114,6 @@ pub async fn get_uids_from_req(
 
     if rows.len() > 0 {
         let uid = rows[0].get::<'_, _, i64>(0);
-        dbg!(&uid);
         return Ok(uid);
     }
 
