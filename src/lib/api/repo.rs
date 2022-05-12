@@ -117,7 +117,6 @@ pub async fn get_uids_from_req(
         return Ok(uid);
     }
 
-    dbg!(PG_MAX_BIGINT);
     Ok(PG_MAX_BIGINT)
 }
 
