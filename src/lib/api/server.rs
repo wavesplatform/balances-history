@@ -13,6 +13,7 @@ use wavesexchange_warp::error::{
 };
 use wavesexchange_warp::log::access;
 use wavesexchange_warp::pagination::{List, PageInfo};
+use wavesexchange_warp::MetricsWarpBuilder;
 
 const BALANCE_HISTORY_PAIRS_LIMIT: i32 = 100;
 const ERROR_CODES_PREFIX: u16 = 95;
@@ -96,8 +97,11 @@ pub async fn run(rdb: Pool) -> Result<(), AppError> {
 
     info!("Starting api-server listening on :{}", SETTINGS.config.port);
 
-    warp::serve(routes)
-        .run(([0, 0, 0, 0], SETTINGS.config.port))
+    MetricsWarpBuilder::new()
+        .with_main_routes(routes)
+        .with_main_routes_port(SETTINGS.config.port)
+        .with_metrics_port(SETTINGS.config.metrics_port)
+        .run_blocking()
         .await;
 
     Ok(())
