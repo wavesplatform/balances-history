@@ -101,7 +101,7 @@ pub async fn run(rdb: Pool) -> Result<(), AppError> {
         .with_main_routes(routes)
         .with_main_routes_port(SETTINGS.config.port)
         .with_metrics_port(SETTINGS.config.metrics_port)
-        .run_blocking()
+        .run_async()
         .await;
 
     Ok(())
