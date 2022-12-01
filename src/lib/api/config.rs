@@ -2,9 +2,15 @@ use crate::config::postgres::PostgresConfig;
 use anyhow::Result;
 use serde::Deserialize;
 
+fn default_metrics_port() -> u16 {
+    9090
+}
+
 #[derive(Deserialize, Debug, Clone)]
 struct ConfigFlat {
     pub port: u16,
+    #[serde(default = "default_metrics_port")]
+    pub metrics_port: u16,
     pub pghost: String,
     pub pgport: u16,
     pub pgdatabase: String,
@@ -19,6 +25,7 @@ struct ConfigFlat {
 pub struct Config {
     pub postgres: PostgresConfig,
     pub port: u16,
+    pub metrics_port: u16,
 }
 
 pub fn load() -> Result<Config> {
@@ -26,6 +33,7 @@ pub fn load() -> Result<Config> {
 
     Ok(Config {
         port: config_flat.port,
+        metrics_port: config_flat.metrics_port,
         postgres: PostgresConfig {
             host: config_flat.pghost,
             port: config_flat.pgport,
