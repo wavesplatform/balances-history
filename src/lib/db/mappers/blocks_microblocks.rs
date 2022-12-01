@@ -28,8 +28,6 @@ pub async fn save(
     solidified: bool,
     block_type: &BlockType,
 ) -> i64 {
-    use crate::consumer::{ArcSettingsTrait, ARC_SETTINGS};
-
     let sql = "insert into blocks_microblocks(id, height, time_stamp, is_solidified, block_type) values ($1,$2,$3,$4,$5) returning uid";
 
     let st = tr.prepare(&sql).await.unwrap();
@@ -46,10 +44,6 @@ pub async fn save(
         )
         .await
         .unwrap();
-
-    // let cfg = ARC_SETTINGS.read().await;
-
-    // println!("test change settings, {:?}", cfg.test_changed);
 
     rows[0].get(0)
 }
@@ -69,7 +63,7 @@ pub async fn get_last_height(db: &Db) -> Option<i32> {
             }
             None
         }
-        Err(e) => {
+        Err(_e) => {
             //need to check error for empty table
             None
         }

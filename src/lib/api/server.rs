@@ -26,7 +26,7 @@ fn with_resource<T: Send + Sync + Clone + 'static>(
 }
 
 pub async fn run(rdb: Pool) -> Result<(), AppError> {
-    let create_serde_qs_config = || serde_qs::Config::new(5, false);
+    // let create_serde_qs_config = || serde_qs::Config::new(5, false);
 
     let bh = warp::path!("balance_history")
         .and(warp::post())
