@@ -1,11 +1,5 @@
-#[macro_use]
-extern crate diesel;
-
 use diesel::{pg::PgConnection, Connection};
-use diesel_migrations::{
-    find_migrations_directory, revert_latest_migration_in_directory,
-    run_pending_migrations_in_directory,
-};
+use diesel_migrations::{FileBasedMigrations, MigrationHarness};
 use lib::config::migration as migration_config;
 use std::{convert::TryInto, env};
 
@@ -43,16 +37,15 @@ fn main() {
         config.postgres.database
     );
 
-    let conn = PgConnection::establish(&db_url).unwrap();
-    let dir = find_migrations_directory().unwrap();
-    let path = dir.as_path();
+    let mut conn = PgConnection::establish(&db_url).unwrap();
+    let dir = FileBasedMigrations::find_migrations_directory().unwrap();
 
     match action {
         Action::Up => {
-            run_pending_migrations_in_directory(&conn, path, &mut std::io::stdout()).unwrap();
+            MigrationHarness::run_pending_migrations(&mut conn, dir).unwrap();
         }
         Action::Down => {
-            revert_latest_migration_in_directory(&conn, path).unwrap();
+            MigrationHarness::revert_last_migration(&mut conn, dir).unwrap();
         }
     };
 }
