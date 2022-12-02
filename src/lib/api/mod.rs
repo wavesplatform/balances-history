@@ -13,6 +13,7 @@ use settings::Settings;
 use warp::reject;
 
 pub type ApiDate = DateTime<Utc>;
+static PG_MAX_BIGINT: i64 = 9223372036854775807;
 
 lazy_static! {
     pub static ref SETTINGS: Settings = Settings::init();
@@ -51,6 +52,13 @@ pub struct BalanceResponseItem {
     pub amount: Decimal,
     pub block_height: i32,
     pub block_timestamp: ApiDate,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct BalanceResponseAggItem {
+    pub date_stamp: ApiDate,
+    pub amount_begin: Decimal,
+    pub amount_end: Decimal,
 }
 
 impl BalanceQuery {

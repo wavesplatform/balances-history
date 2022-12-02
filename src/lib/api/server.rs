@@ -1,8 +1,10 @@
 use super::error::AppError;
 use super::repo::AssetDistribution;
 use super::{
-    api_custom_reject, repo, AssetDistributionItem, BalanceQuery, BalanceResponseItem, SETTINGS,
+    api_custom_reject, repo, AssetDistributionItem, BalanceQuery, BalanceResponseAggItem,
+    BalanceResponseItem, SETTINGS,
 };
+use chrono::{DateTime, Timelike, Utc};
 use deadpool_postgres::Pool;
 use std::collections::HashMap;
 use std::convert::Infallible;
@@ -39,9 +41,19 @@ pub async fn run(rdb: Pool) -> Result<(), AppError> {
     let bh_address = warp::path!("balance_history" / "address" / String)
         .and(warp::get())
         .and(warp::path::end())
+        .and(warp::path::end())
         .and(with_resource(rdb.clone()))
         .and(warp::query::<HashMap<String, String>>())
         .and_then(bh_handler_address)
+        .map(|l| warp::reply::json(&l));
+
+    let bh_balance_aggregates = warp::path!("balance_history" / "aggregates" / String / String)
+        .and(warp::get())
+        .and(warp::path::end())
+        .and(warp::path::end())
+        .and(with_resource(rdb.clone()))
+        .and(warp::query::<HashMap<String, String>>())
+        .and_then(bh_balance_aggregates)
         .map(|l| warp::reply::json(&l));
 
     let bh_asset_distribution = warp::path!("asset_distribution" / String / u32)
@@ -88,6 +100,7 @@ pub async fn run(rdb: Pool) -> Result<(), AppError> {
 
     let routes = bh
         .or(bh_address)
+        .or(bh_balance_aggregates)
         .or(bh_asset_distribution)
         .or(bh_asset_distribution_task)
         .recover(move |rej| {
@@ -143,6 +156,64 @@ async fn bh_handler_address(
     let uid = repo::get_uids_from_req(&rdb, &get_params).await?;
 
     let items: Vec<BalanceResponseItem> = repo::all_assets_by_address(&rdb, &address, &uid).await?;
+
+    let list = List {
+        items: items,
+        page_info: PageInfo {
+            last_cursor: None,
+            has_next_page: false,
+        },
+    };
+
+    Ok(list)
+}
+
+async fn bh_balance_aggregates(
+    address: String,
+    asset_id: String,
+    rdb: Pool,
+    get_params: HashMap<String, String>,
+) -> Result<List<BalanceResponseAggItem>, reject::Rejection> {
+    let date_from = match get_params.get("date_from".into()) {
+        Some(gd) => {
+            let d: Result<DateTime<Utc>, _> = gd.parse();
+            match d {
+                Ok(d) => d
+                    .with_hour(0)
+                    .unwrap()
+                    .with_minute(0)
+                    .unwrap()
+                    .with_second(0)
+                    .unwrap()
+                    .timestamp_millis(),
+                Err(_) => {
+                    return Err(AppError::InvalidQueryString("date_from ".to_string()).into());
+                }
+            }
+        }
+        None => 0,
+    };
+
+    let date_to = match get_params.get("date_to".into()) {
+        Some(gd) => {
+            let d: Result<DateTime<Utc>, _> = gd.parse();
+            match d {
+                Ok(d) => d
+                    .with_hour(23)
+                    .unwrap()
+                    .with_minute(59)
+                    .unwrap()
+                    .with_second(59)
+                    .unwrap()
+                    .timestamp_millis(),
+                Err(_) => return Err(AppError::InvalidQueryString("date_to ".to_string()).into()),
+            }
+        }
+        None => super::PG_MAX_BIGINT,
+    };
+
+    let items =
+        repo::balance_history_aggregated(&rdb, &address, &asset_id, date_from, date_to).await?;
 
     let list = List {
         items: items,

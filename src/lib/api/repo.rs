@@ -1,18 +1,18 @@
 use super::{
-    error::AppError, AssetDistributionItem, BalanceEntry, BalanceQuery, BalanceResponseItem,
+    error::AppError, AssetDistributionItem, BalanceEntry, BalanceQuery, BalanceResponseAggItem,
+    BalanceResponseItem,
 };
 use crate::{
     api::server::DEFAULT_LIMIT,
     db::{mappers::distribution_task, PooledDb},
 };
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use futures::future::try_join_all;
 use postgres_types::ToSql;
+use rust_decimal::Decimal;
 use serde::Serialize;
 use std::collections::HashMap;
 use wavesexchange_log::info;
-
-static PG_MAX_BIGINT: i64 = 9223372036854775807;
 
 #[derive(Debug)]
 enum UidsQuery<'a> {
@@ -117,7 +117,7 @@ pub async fn get_uids_from_req(
         return Ok(uid);
     }
 
-    Ok(PG_MAX_BIGINT)
+    Ok(super::PG_MAX_BIGINT)
 }
 
 pub async fn get_balances_by_pairs(
@@ -373,4 +373,90 @@ async fn balance_query(
     };
 
     Ok(Some(ret))
+}
+
+pub(crate) async fn balance_history_aggregated(
+    db: &PooledDb,
+    address: &str,
+    asset_id: &str,
+    timestamp_from: i64,
+    timestamp_to: i64,
+) -> Result<Vec<BalanceResponseAggItem>, AppError> {
+    let sql = "select min(uid) min_uid, max(uid) max_uid
+                     from blocks_microblocks 
+                     where 
+                        time_stamp >= $1 
+                     and time_stamp <= $2";
+
+    let conn = conn!(db);
+    let params: Vec<&(dyn ToSql + Sync)> = vec![&timestamp_from, &timestamp_to];
+
+    let rows = conn
+        .query(sql, &params)
+        .await
+        .map_err(|err| AppError::DbError(err.to_string()))?;
+
+    let row = rows
+        .iter()
+        .next()
+        .ok_or(AppError::DbError("uids query has no rows".to_string()))?;
+
+    let min_uid: Option<i64> = row.get(0);
+    let max_uid: Option<i64> = row.get(1);
+
+    if min_uid.is_none() && max_uid.is_none() {
+        return Ok(vec![]);
+    }
+
+    let min_uid = min_uid.unwrap_or(0);
+    let max_uid = max_uid.unwrap_or(super::PG_MAX_BIGINT);
+
+    let sql = "WITH
+        balances AS (
+            select
+                row_number() over (partition by date_trunc('DAY', to_timestamp(b.time_stamp/1000)) order by h.uid desc) as is_last,
+                date_trunc('DAY', to_timestamp(b.time_stamp/1000)) date_stamp,
+                amount        
+            from balance_history h
+            inner join blocks_microblocks b on b.uid = h.block_uid 
+            where h.address_id = (select uid from unique_address where address = $3)
+                and h.asset_id = (select uid from unique_assets where asset_id = $4)    
+                and h.block_uid >= $1
+            and h.block_uid <= $2
+        ),
+        last_day_balances AS (
+            select 
+                date_stamp,
+                (array_agg(amount))[1] last_balance
+                from balances 
+                where is_last = 1
+                group by date_stamp
+                order by date_stamp asc
+        )
+        select 
+            date_stamp, 
+            coalesce(lag(last_balance) over (), 0) first_balance, 
+            last_balance 
+        from last_day_balances";
+
+    let params: Vec<&(dyn ToSql + Sync)> = vec![&min_uid, &max_uid, &address, &asset_id];
+
+    let rows = conn
+        .query(sql, &params)
+        .await
+        .map_err(|err| AppError::DbError(err.to_string()))?;
+
+    let mut out = vec![];
+
+    for row in rows {
+        let item = BalanceResponseAggItem {
+            amount_begin: row.get(1),
+            amount_end: row.get(2),
+            date_stamp: row.get(0),
+        };
+
+        out.push(item);
+    }
+
+    Ok(out)
 }
