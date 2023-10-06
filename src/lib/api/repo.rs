@@ -349,7 +349,7 @@ async fn balance_query(
             where b.block_uid <= $1
                 and b.address_id = (select uid from unique_address where address = $2)
                 and b.asset_id = (select uid from unique_assets where asset_id = $3)
-            order by b.uid desc 
+            order by b.block_uid desc, b.uid desc
             limit 1";
 
     let conn = conn!(db);
