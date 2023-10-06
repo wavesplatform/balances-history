@@ -1,4 +1,4 @@
-use deadpool_postgres::{Config, ManagerConfig, RecyclingMethod, Runtime};
+use deadpool_postgres::{Config, ManagerConfig, PoolConfig, RecyclingMethod, Runtime};
 use lib::api::error::AppError;
 use lib::api::SETTINGS;
 use tokio_postgres::NoTls;
@@ -14,6 +14,8 @@ pub async fn main() -> Result<(), AppError> {
     db_cfg.dbname = Some(SETTINGS.config.postgres.database.to_string());
 
     db_cfg.connect_timeout = Some(std::time::Duration::from_secs(5));
+
+    db_cfg.pool = Some(PoolConfig::new(SETTINGS.config.postgres.pool_size));
 
     db_cfg.manager = Some(ManagerConfig {
         recycling_method: RecyclingMethod::Fast,
