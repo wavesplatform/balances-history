@@ -17,7 +17,7 @@ COPY ./src ./src
 
 RUN cargo install --path .
 
-FROM debian:11-slim
+FROM debian:12.1-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y curl openssl libssl-dev libpq-dev
 RUN /usr/sbin/update-ca-certificates
