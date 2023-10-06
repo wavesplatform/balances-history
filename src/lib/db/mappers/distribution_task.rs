@@ -2,7 +2,7 @@ use crate::{
     api::error::AppError,
     db::{Db, PooledDb},
 };
-use wavesexchange_log::{error, info, warn};
+use wavesexchange_log::error;
 
 #[derive(Clone, Debug)]
 pub struct AssetDistributionTask {
@@ -13,13 +13,13 @@ pub struct AssetDistributionTask {
 }
 
 pub async fn next_task(db: &Db) -> Result<Option<AssetDistributionTask>, anyhow::Error> {
-    let sql = "select adt.uid, ua.uid as asset_uid, ua.asset_id, adt.height 
+    let sql = "select adt.uid, ua.uid as asset_uid, ua.asset_id, adt.height
                         from asset_distribution_tasks adt
-                        inner join unique_assets ua 
+                        inner join unique_assets ua
                             on adt.asset_id = ua.asset_id
-                        where 
+                        where
                             adt.task_state = 'new'::enum_task_state_ad
-                        order by adt.uid desc 
+                        order by adt.uid desc
                         limit 1";
 
     let row = db

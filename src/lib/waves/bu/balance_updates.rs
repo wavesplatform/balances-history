@@ -7,7 +7,7 @@ use crate::waves::{BlockType, BlockchainUpdateInfo};
 use rust_decimal::Decimal;
 use tokio::sync::mpsc::{self, Sender};
 use waves_protobuf_schemas::waves::{events::state_update::BalanceUpdate, Amount};
-use wavesexchange_log::{error, info};
+use wavesexchange_log::info;
 
 const CHUNK_SIZE: usize = 1000;
 const BH_TABLE_NAME: &str = "balance_history";

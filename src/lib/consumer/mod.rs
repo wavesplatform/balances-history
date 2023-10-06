@@ -9,7 +9,7 @@ use tokio::{
     select,
     time::{self as tokio_time, Duration as tokio_duration, Instant as tokio_instant},
 };
-use wavesexchange_log::{error, info, warn};
+use wavesexchange_log::{error, info};
 
 use waves_protobuf_schemas::waves::events::grpc::{
     blockchain_updates_api_client::BlockchainUpdatesApiClient, SubscribeRequest,

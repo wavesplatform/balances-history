@@ -1,6 +1,6 @@
 use crate::waves::bu::balance_updates::BalanceHistory;
 use itertools::Itertools;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use tokio_postgres::{types::ToSql, Transaction};
 
 const BULK_CHUNK_SIZE: usize = 5000;
@@ -40,12 +40,12 @@ pub async fn merge_bulk(
         let sql = format!(
             "with vals(assets)  as (
                     select * from (values {vals}) as t(TEXT)
-                ), 
+                ),
                 ins as (
                     insert into unique_assets(asset_id) select * from vals on conflict (asset_id) do nothing returning uid, asset_id
                 )
                 select * from ins
-                union 
+                union
                 select * from unique_assets where asset_id in (
                     select * from vals
                 )");

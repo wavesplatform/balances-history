@@ -1,6 +1,6 @@
 use crate::{db::*, waves::BlockType};
 use tokio_postgres::Transaction;
-use wavesexchange_log::{error, info};
+use wavesexchange_log::info;
 
 #[derive(Clone, Debug)]
 pub struct Block {
@@ -151,13 +151,13 @@ pub async fn solidify(tr: &Transaction<'_>, ref_block_id: &String) -> Option<(i6
                     update blocks_microblocks set is_solidified = true, microblock_id = id, id = $1 where time_stamp <> 0 and is_solidified = false returning uid, id, time_stamp, height
                 ),
                 upd as (
-                    update blocks_microblocks b set 
-                        height = last_real_block.height, 
+                    update blocks_microblocks b set
+                        height = last_real_block.height,
                         microblock_id = b.id,
-                        id = last_real_block.id, 
+                        id = last_real_block.id,
                         time_stamp = last_real_block.time_stamp,
                         is_solidified = true
-                    from last_real_block 
+                    from last_real_block
                     where b.time_stamp = 0
                     returning b.uid, b.height, b.time_stamp
                 )
