@@ -10,7 +10,6 @@ use futures::future::try_join_all;
 use postgres_types::ToSql;
 use serde::Serialize;
 use std::collections::HashMap;
-use wavesexchange_log::info;
 
 static PG_MAX_BIGINT: i64 = 9223372036854775807;
 
@@ -223,7 +222,7 @@ pub async fn asset_distribution(
         from {}.task_uid_{}_{} ad
         inner join unique_address uaddr on ad.address_id = uaddr.uid
         where ad.uid > $1
-        order by ad.uid 
+        order by ad.uid
         limit $2",
         crate::ASSET_DISTRIBUTION_PG_SCHEMA,
         task.uid,
@@ -292,12 +291,12 @@ async fn distinct_assets_by_address(
     db: &PooledDb,
     address: &String,
 ) -> Result<Vec<BalanceEntry>, AppError> {
-    let sql = "select ad.address, ast.asset_id 
+    let sql = "select ad.address, ast.asset_id
                 from balance_history b
                     inner join unique_assets ast on b.asset_id = ast.uid
                     inner join unique_address ad on b.address_id = ad.uid
-                where 
-                    address_id = (select uid from unique_address where address = $1) 
+                where
+                    address_id = (select uid from unique_address where address = $1)
                 group by 1, 2";
 
     let conn = conn!(db);
@@ -342,7 +341,7 @@ async fn balance_query(
     e: &BalanceEntry,
 ) -> Result<Option<BalanceResponseItem>, anyhow::Error> {
     let sql = "select ad.address, ast.asset_id, b.amount, bm.height block_height, to_timestamp(bm.time_stamp/1000) block_timestamp
-            from balance_history b 
+            from balance_history b
                 inner join blocks_microblocks bm on b.block_uid = bm.uid
                 inner join unique_assets ast on b.asset_id = ast.uid
                 inner join unique_address ad on b.address_id = ad.uid

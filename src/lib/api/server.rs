@@ -1,8 +1,6 @@
 use super::error::AppError;
 use super::repo::AssetDistribution;
-use super::{
-    api_custom_reject, repo, AssetDistributionItem, BalanceQuery, BalanceResponseItem, SETTINGS,
-};
+use super::{repo, AssetDistributionItem, BalanceQuery, BalanceResponseItem, SETTINGS};
 use deadpool_postgres::Pool;
 use std::collections::HashMap;
 use std::convert::Infallible;

@@ -1,4 +1,4 @@
-FROM rust:1.65.0 as builder
+FROM rust:1.73.0 as builder
 WORKDIR /usr/src/
 
 RUN rustup component add rustfmt
@@ -17,8 +17,8 @@ COPY ./src ./src
 
 RUN cargo install --path .
 
-FROM debian:11-slim
-WORKDIR /usr/www/app
+FROM debian:12.1-slim
+WORKDIR /app
 RUN apt-get update && apt-get install -y curl openssl libssl-dev libpq-dev
 RUN /usr/sbin/update-ca-certificates
 

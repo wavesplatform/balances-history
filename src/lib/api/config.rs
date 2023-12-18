@@ -16,7 +16,7 @@ struct ConfigFlat {
     pub pgdatabase: String,
     pub pguser: String,
     pub pgpassword: String,
-    pub pgpoolsize: u32,
+    pub pgpoolsize: usize,
     pub pgconnection_timeout: u32,
     pub pgkeepalives_idle: u32,
 }

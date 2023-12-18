@@ -6,7 +6,7 @@ fn default_pgport() -> u16 {
     5432
 }
 
-fn default_pgpool() -> u32 {
+fn default_pgpool() -> usize {
     4
 }
 
@@ -19,7 +19,7 @@ struct ConfigFlat {
     pub pguser: String,
     pub pgpassword: String,
     #[serde(default = "default_pgpool")]
-    pub pgpoolsize: u32,
+    pub pgpoolsize: usize,
     pub pgconnection_timeout: u32,
     pub pgkeepalives_idle: u32,
 }

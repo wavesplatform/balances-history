@@ -1,7 +1,7 @@
 use super::distribution_task::{self, AssetDistributionTask};
 use crate::db::Db;
 use tokio_postgres::Transaction;
-use wavesexchange_log::{info, warn};
+use wavesexchange_log::info;
 
 use super::blocks_microblocks;
 
@@ -71,7 +71,7 @@ pub async fn process_task(
         create table distribution_hist as
 
         select bh.address_id, max(bh.uid) max_bh_uid
-            from balance_history bh 
+            from balance_history bh
             inner join blocks_microblocks b on bh.block_uid = b.uid
             where bh.asset_id = $1
             and b.height <= $2
@@ -96,9 +96,9 @@ pub async fn process_task(
     let sql = "update distribution_hist h
             set amount = bh.amount,
                 height = b.height
-        from balance_history bh 
+        from balance_history bh
             inner join blocks_microblocks b on bh.block_uid = b.uid
-        where 
+        where
         h.max_bh_uid = bh.uid
             and h.address_id = bh.address_id
             and bh.asset_id = $1";
