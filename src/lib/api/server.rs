@@ -4,7 +4,9 @@ use super::{repo, AssetDistributionItem, BalanceQuery, BalanceResponseItem, SETT
 use deadpool_postgres::Pool;
 use std::collections::HashMap;
 use std::convert::Infallible;
+use std::time::Duration;
 use warp::{reject, Filter};
+use wavesexchange_liveness::channel;
 use wavesexchange_log::{error, info};
 use wavesexchange_warp::error::{
     error_handler_with_serde_qs, handler, internal, timeout, validation,
@@ -13,6 +15,8 @@ use wavesexchange_warp::log::access;
 use wavesexchange_warp::pagination::{List, PageInfo};
 use wavesexchange_warp::MetricsWarpBuilder;
 
+const POLL_INTERVAL_SECS: u64 = 60;
+const MAX_BLOCK_AGE: Duration = Duration::from_secs(300);
 const BALANCE_HISTORY_PAIRS_LIMIT: i32 = 100;
 const ERROR_CODES_PREFIX: u16 = 95;
 pub const DEFAULT_LIMIT: i64 = 100;
@@ -93,12 +97,16 @@ pub async fn run(rdb: Pool) -> Result<(), AppError> {
         })
         .with(log);
 
+    let db_url = SETTINGS.config.postgres.database_url();
+    let readiness_channel = channel(db_url, POLL_INTERVAL_SECS, MAX_BLOCK_AGE);
+
     info!("Starting api-server listening on :{}", SETTINGS.config.port);
 
     MetricsWarpBuilder::new()
         .with_main_routes(routes)
         .with_main_routes_port(SETTINGS.config.port)
         .with_metrics_port(SETTINGS.config.metrics_port)
+        .with_readiness_channel(readiness_channel)
         .run_async()
         .await;
 
