@@ -3277,7 +3277,7 @@ dependencies = [
 [[package]]
 name = "wavesexchange_liveness"
 version = "0.1.0"
-source = "git+https://github.com/waves-exchange/wavesexchange-rs?tag=wavesexchange_liveness/0.2.0#936ec08a26d38f790302484162bc49af0b30ea15"
+source = "git+https://github.com/waves-exchange/wavesexchange-rs?tag=wavesexchange_liveness/0.2.1#530a3969cbafe3c4b6441c14f1548d76ead0e59c"
 dependencies = [
  "diesel",
  "tokio",
