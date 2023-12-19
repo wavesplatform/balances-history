@@ -3,7 +3,14 @@ use consumer::SETTINGS;
 use lib::consumer;
 use lib::db::mappers::distribution_task;
 use lib::db::*;
-use wavesexchange_log::info;
+use std::time::Duration;
+use tokio::select;
+use wavesexchange_liveness::channel;
+use wavesexchange_log::{error, info};
+use wavesexchange_warp::MetricsWarpBuilder;
+
+const POLL_INTERVAL_SECS: u64 = 60;
+const MAX_BLOCK_AGE: Duration = Duration::from_secs(300);
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -21,7 +28,28 @@ async fn main() -> Result<()> {
 
     drop(db);
 
-    consumer::run(SETTINGS.config.blockchain_updates_url.clone(), start_height).await
+    let consumer = consumer::run(SETTINGS.config.blockchain_updates_url.clone(), start_height);
+
+    let db_url = SETTINGS.config.postgres.database_url();
+    let readiness_channel = channel(db_url, POLL_INTERVAL_SECS, MAX_BLOCK_AGE);
+
+    let metrics = tokio::spawn(async move {
+        MetricsWarpBuilder::new()
+            .with_metrics_port(SETTINGS.config.metrics_port)
+            .with_readiness_channel(readiness_channel)
+            .run_async()
+            .await
+    });
+
+    select! {
+        Err(err) = consumer => {
+            error!("{}", err);
+            panic!("consumer panic: {}", err);
+        },
+        _ = metrics => error!("metrics stopped")
+    };
+
+    Ok(())
 }
 
 async fn init_db_data(db: &mut Db) -> Result<(), anyhow::Error> {
