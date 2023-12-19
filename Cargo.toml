@@ -1,6 +1,6 @@
 [package]
 name = "balances-history"
-version = "1.0.2"
+version = "1.0.3"
 authors = ["Sergey Kutsenko <skutsenko@web3tech.ru>"]
 edition = "2021"
 
@@ -32,9 +32,10 @@ rust_decimal = { version = "1.14.3", features = [
     "db-tokio-postgres",
     "db-postgres",
 ] }
-wavesexchange_log = { git = "https://github.com/waves-exchange/wavesexchange-rs", tag = "wavesexchange_log/0.5.0" }
-wavesexchange_warp = { git = "https://github.com/waves-exchange/wavesexchange-rs", tag = "wavesexchange_warp/0.14.3" }
-wavesexchange_apis = { git = "https://github.com/waves-exchange/wavesexchange-rs", tag = "wavesexchange_apis/0.1.13" }
+wavesexchange_log = { git = "https://github.com/waves-exchange/wavesexchange-rs", tag = "wavesexchange_log/0.5.1" }
+wavesexchange_warp = { git = "https://github.com/waves-exchange/wavesexchange-rs", tag = "wavesexchange_warp/0.14.9" }
+wavesexchange_apis = { git = "https://github.com/waves-exchange/wavesexchange-rs", tag = "wavesexchange_apis/0.1.36" }
+wavesexchange_liveness = { git = "https://github.com/waves-exchange/wavesexchange-rs", tag = "wavesexchange_liveness/0.2.1"}
 
 futures = "0.3"
 anyhow = "1.0.53"

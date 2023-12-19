@@ -28,14 +28,7 @@ fn main() {
 
     let config = migration_config::load().unwrap();
 
-    let db_url = format!(
-        "postgres://{}:{}@{}:{}/{}",
-        config.postgres.user,
-        config.postgres.password,
-        config.postgres.host,
-        config.postgres.port,
-        config.postgres.database
-    );
+    let db_url = config.postgres.database_url();
 
     let mut conn = PgConnection::establish(&db_url).unwrap();
     let dir = FileBasedMigrations::find_migrations_directory().unwrap();

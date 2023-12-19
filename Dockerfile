@@ -2,6 +2,7 @@ FROM rust:1.73.0 as builder
 WORKDIR /usr/src/
 
 RUN rustup component add rustfmt
+RUN apt-get update && apt-get install -y protobuf-compiler
 
 # temporary disable dependancy cache
 # RUN echo "fn main() {}" > dummy.rs
